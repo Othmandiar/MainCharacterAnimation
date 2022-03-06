@@ -16,7 +16,7 @@ namespace StarterAssets
 #endif
 	public class ThirdPersonController : MonoBehaviour
 	{
-       
+        public GameObject wheelUi;
         public GameObject parent;
 		[Header("Player")]
 		[Tooltip("Move speed of the character in m/s")]
@@ -95,7 +95,7 @@ namespace StarterAssets
 
 		private bool _hasAnimator,inAreaToSit=false, wantToSit=false, setDesiredY = false;
         GameObject chair;
-
+        GameState gameState = new GameState();
 
         private void Awake()
 		{
@@ -159,7 +159,18 @@ namespace StarterAssets
         private void Update()
 		{
 			_hasAnimator = TryGetComponent(out _animator);
-            
+            if(Input.GetKeyDown(KeyCode.Tab))
+            {
+                wheelUi.active = true;
+                gameState.PauseGame();
+            }
+
+            if (Input.GetKeyUp(KeyCode.Tab))
+            {
+                wheelUi.active = false;
+                gameState.ResumeGame();
+            }
+
             if (Input.GetKeyDown(KeyCode.Z))
             {
                 wantToSit = false;
