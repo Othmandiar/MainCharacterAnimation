@@ -63,8 +63,11 @@ namespace StarterAssets
 		[Tooltip("For locking the camera position on all axis")]
 		public bool LockCameraPosition = false;
 
-		// cinemachine
-		private float _cinemachineTargetYaw;
+
+        public bool isMove = false;
+
+        // cinemachine
+        private float _cinemachineTargetYaw;
 		private float _cinemachineTargetPitch;
 
 		// player
@@ -93,7 +96,7 @@ namespace StarterAssets
 
 		private const float _threshold = 0.01f;
 
-		private bool _hasAnimator,inAreaToSit=false, wantToSit=false, setDesiredY = false;
+        private bool _hasAnimator,inAreaToSit=false, wantToSit=false, setDesiredY = false;
         GameObject chair;
         GameState gameState = new GameState();
 
@@ -198,10 +201,15 @@ namespace StarterAssets
             }
             JumpAndGravity();
 			GroundedCheck();
-			Move();
+            float lastX = (int)(transform.position.x * 10), lastY = (int)(transform.position.y * 10), lastZ = (int)(transform.position.z * 10);
+            Move();
             if (wantToSit)
             {
                 sit();
+            }
+            if (lastX / 10 != ((int)transform.position.x * 10) / 10 || lastY / 10 != ((int)transform.position.y * 10) / 10 || lastZ / 10 != ((int)transform.position.z * 10) / 10)
+            {
+                isMove = true;
             }
         }
 
