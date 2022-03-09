@@ -1,6 +1,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -31,11 +32,12 @@ using Sfs2X.Logging;
         void Awake()
         {
             instance = this;
-        }
+        smartFox = SmartFoxConnection.Connection;
+    }
 
         void Start()
         {
-            smartFox = SmartFoxConnection.Connection;
+
             if (smartFox == null)
             {
                 SceneManager.LoadScene("singIn Scene");
@@ -91,7 +93,8 @@ using Sfs2X.Logging;
             Room room = smartFox.LastJoinedRoom;
             ISFSObject data = new SFSObject();
             ntransform.ToSFSObject(data);
-            ExtensionRequest request = new ExtensionRequest("sendTransform", data, room, true); // True flag = UDP
+
+            ExtensionRequest request = new ExtensionRequest("sendTransform", data, room); // True flag = UDP
             smartFox.Send(request);
         }
 
@@ -104,13 +107,22 @@ using Sfs2X.Logging;
         /// <param name="layer">
         /// A <see cref="System.Int32"/>
         /// </param>
-        public void SendAnimationState(string message, int layer)
+        /// 
+
+
+        public void SendAnimationStates(List<KeyValuePair<string,bool>> boolStates, List<KeyValuePair<string, float>> floatStates)
         {
             Room room = smartFox.LastJoinedRoom;
             ISFSObject data = new SFSObject();
-            data.PutUtfString("msg", message);
-            data.PutInt("layer", layer);
-            ExtensionRequest request = new ExtensionRequest("sendAnim", data, room);
+            for(int i=0;i<boolStates.Count;i++)
+        {
+            data.PutBool(boolStates[i].Key, boolStates[i].Value);
+        }
+        for (int i = 0; i < floatStates.Count; i++)
+        {
+            data.PutFloat(floatStates[i].Key, floatStates[i].Value);
+        }
+        ExtensionRequest request = new ExtensionRequest("sendAnim", data, room);
             smartFox.Send(request);
         }
 
@@ -142,7 +154,7 @@ using Sfs2X.Logging;
             {
                 string cmd = (string)evt.Params["cmd"];
                 ISFSObject dt = (SFSObject)evt.Params["params"];
-                if (cmd == "spawnPlayer")
+            if (cmd == "spawnPlayer")
                 {
                     HandleInstantiatePlayer(dt);
                 }
@@ -152,7 +164,7 @@ using Sfs2X.Logging;
                 }
                 else if (cmd == "notransform")
                 {
-                    HandleNoTransform(dt);
+                HandleNoTransform(dt);
                 }
                 else if (cmd == "anim")
                 {
@@ -199,9 +211,8 @@ using Sfs2X.Logging;
             NetworkTransform ntransform = NetworkTransform.FromSFSObject(dt);
             if (userId != smartFox.MySelf.Id)
             {
-                // Update transform of the remote user object
-
-                NetworkTransformReceiver recipient = PlayerManager.Instance.GetRecipient(userId);
+            // Update transform of the remote user object
+            NetworkTransformReceiver recipient = PlayerManager.Instance.GetRecipient(userId);
                 if (recipient != null)
                 {
                     recipient.ReceiveTransform(ntransform);
@@ -234,14 +245,16 @@ using Sfs2X.Logging;
     // Synchronizing remote animation
     private void HandleAnimation(ISFSObject dt)
     {
-        //int userId = dt.GetInt("id");
-        //string msg = dt.GetUtfString("msg");
-        //int layer = dt.GetInt("layer");
+        int userId = dt.GetInt("id");
 
-        //if (userId != smartFox.MySelf.Id)
-        //{
-        //    PlayerManager.Instance.SyncAnimation(userId, msg, layer);
-        //}
+        if (userId != smartFox.MySelf.Id)
+        {
+            NetwirkAnimationSync remoteAnim = PlayerManager.Instance.GetRecipient(userId).GetComponent<NetwirkAnimationSync>();
+            if (remoteAnim != null)
+            {
+                remoteAnim.setAnimatorValues(dt);
+            }
+        }
     }
 
     // When someon shots handle it and play corresponding animation 

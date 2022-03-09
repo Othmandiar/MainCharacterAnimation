@@ -29,8 +29,6 @@ using UnityEngine;
         }
 
         private Dictionary<int, NetworkTransformReceiver> recipients = new Dictionary<int, NetworkTransformReceiver>();
-        private Dictionary<int, GameObject> items = new Dictionary<int, GameObject>();
-
         void Awake()
         {
             instance = this;
@@ -45,17 +43,26 @@ using UnityEngine;
                 Destroy(Camera.main.gameObject);
             }
             playerObj = GameObject.Instantiate(playerPrefab) as GameObject;
-        //playerObj.transform.position = ntransform.Position;
-        playerObj.transform.position = new Vector3(0,10,0);
+        for(int i=0;i< playerObj.transform.GetChildCount();i++)
+        {
+            if(playerObj.transform.GetChild(i).tag=="Player")
+            {
+                playerObj = playerObj.transform.GetChild(i).gameObject ;
+
+            }
+        }
+        playerObj.transform.position = ntransform.Position;
+        //playerObj.transform.position = new Vector3(0,10,0);
         playerObj.transform.localEulerAngles = ntransform.AngleRotationFPS;
-            //playerObj.SendMessage("StartSendTransform");
+        // playerObj.SendMessage("StartSendTransform");
+        playerObj.GetComponent<NetworkTransformSender>().StartSendTransform();
         }
 
         public void SpawnEnemy(int id, NetworkTransform ntransform, string name, int score)
         {
             GameObject playerObj = GameObject.Instantiate(PartnerPrefab) as GameObject;
-            //playerObj.transform.position = ntransform.Position;
-        playerObj.transform.position = new Vector3(0, 10, 0);
+            playerObj.transform.position = ntransform.Position;
+        //playerObj.transform.position = new Vector3(0, 10, 0);
         playerObj.transform.localEulerAngles = ntransform.AngleRotationFPS;
         //AnimationSynchronizer animator = playerObj.GetComponent<AnimationSynchronizer>();
         //animator.StartReceivingAnimation();

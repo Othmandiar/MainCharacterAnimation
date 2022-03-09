@@ -24,7 +24,7 @@ using System;
         }
 
         // We call it on local player to start sending his transform
-        void StartSendTransform()
+        public void StartSendTransform()
         {
             send = true;
         }

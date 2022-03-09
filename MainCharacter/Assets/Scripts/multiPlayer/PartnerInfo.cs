@@ -15,7 +15,7 @@ public class PartnerInfo : MonoBehaviour
 
     public void SetName(string name)
     {
-        this.name.text = name;
+       // this.name.text = name;
     }
 
     public void Hide()
@@ -34,9 +34,5 @@ public class PartnerInfo : MonoBehaviour
         }
     }
 
-    void LateUpdate()
-    {
-        transform.LookAt(Camera.main.transform);
-    }
 
 }

@@ -101,15 +101,15 @@ using Sfs2X.Entities.Data;
             this.timeStamp = ntransform.timeStamp;
         }
 
-        // Copu the Unity transform to itself
-        public void Update(Transform trans)
-        {
-            trans.position = this.Position;
-            trans.localEulerAngles = this.AngleRotation;
-        }
+    // Copu the Unity transform to itself
+    public void Update(Transform trans)
+    {
+        trans.position = this.Position;
+        trans.localEulerAngles = this.AngleRotation;
+    }
 
-        // Creating NetworkTransform from SFS object
-        public static NetworkTransform FromSFSObject(ISFSObject data)
+    // Creating NetworkTransform from SFS object
+    public static NetworkTransform FromSFSObject(ISFSObject data)
         {
             NetworkTransform trans = new NetworkTransform();
             ISFSObject transformData = data.GetSFSObject("transform");

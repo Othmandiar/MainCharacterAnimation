@@ -18,6 +18,7 @@ using System;
             {
                 interpolator.StartReceiving();
             }
+
         }
 
         public void ReceiveTransform(NetworkTransform ntransform)
@@ -31,7 +32,7 @@ using System;
             {
                 //No interpolation - updating transform directly
                 thisTransform.position = ntransform.Position;
-                // Ignoring x and z rotation angles
+            // Ignoring x and z rotation angles
                 thisTransform.localEulerAngles = ntransform.AngleRotationFPS;
             }
         }

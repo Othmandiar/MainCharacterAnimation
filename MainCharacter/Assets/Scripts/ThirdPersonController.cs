@@ -157,7 +157,8 @@ namespace StarterAssets
             
         }
 
-
+        List<string> boolStates = new List<string>() { "Jump", "TwistDance", "RumbaDance", "HipHopDance", "Sit" };
+        List<string> floatStates = new List<string>() { "Speed", "MotionSpeed" };
 
         private void Update()
 		{
