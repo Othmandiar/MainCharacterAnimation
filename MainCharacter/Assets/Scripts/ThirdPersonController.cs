@@ -159,7 +159,7 @@ namespace StarterAssets
 
         List<string> boolStates = new List<string>() { "Jump", "TwistDance", "RumbaDance", "HipHopDance", "Sit" };
         List<string> floatStates = new List<string>() { "Speed", "MotionSpeed" };
-
+        float timeToSendAnimRequest = 0;
         private void Update()
 		{
 			_hasAnimator = TryGetComponent(out _animator);
@@ -211,6 +211,22 @@ namespace StarterAssets
             if (lastX / 10 != ((int)transform.position.x * 10) / 10 || lastY / 10 != ((int)transform.position.y * 10) / 10 || lastZ / 10 != ((int)transform.position.z * 10) / 10)
             {
                 isMove = true;
+            }
+            List<KeyValuePair<string, bool>> b=new List<KeyValuePair<string, bool>>();
+            List<KeyValuePair<string, float>> f = new List<KeyValuePair<string, float>>();
+            for (int i = 0; i < boolStates.Count; i++)
+            {
+                b.Add(new KeyValuePair<string, bool>(boolStates[i],_animator.GetBool(boolStates[i])));
+            }
+            for (int i = 0; i < floatStates.Count; i++)
+            {
+                f.Add(new KeyValuePair<string, float>(floatStates[i], _animator.GetFloat(floatStates[i])));
+            }
+
+            if(timeToSendAnimRequest<=Time.time)
+            {
+                timeToSendAnimRequest = Time.time + 0.2f;
+                NetworkManager.Instance.SendAnimationStates(b, f);
             }
         }
 

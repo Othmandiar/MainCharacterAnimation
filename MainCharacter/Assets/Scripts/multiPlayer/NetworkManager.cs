@@ -114,9 +114,10 @@ using Sfs2X.Logging;
         {
             Room room = smartFox.LastJoinedRoom;
             ISFSObject data = new SFSObject();
-            for(int i=0;i<boolStates.Count;i++)
+        for (int i = 0; i < boolStates.Count; i++)
         {
             data.PutBool(boolStates[i].Key, boolStates[i].Value);
+            print(boolStates[i].Key + "   " + boolStates[i].Value.ToString());
         }
         for (int i = 0; i < floatStates.Count; i++)
         {
@@ -154,6 +155,7 @@ using Sfs2X.Logging;
             {
                 string cmd = (string)evt.Params["cmd"];
                 ISFSObject dt = (SFSObject)evt.Params["params"];
+            
             if (cmd == "spawnPlayer")
                 {
                     HandleInstantiatePlayer(dt);
@@ -166,11 +168,13 @@ using Sfs2X.Logging;
                 {
                 HandleNoTransform(dt);
                 }
-                else if (cmd == "anim")
-                {
-                    HandleAnimation(dt);
-                }
-                else if (cmd == "time")
+            else if (cmd == "anim")
+            {
+                print("yoooo");
+                HandleAnimation(dt);
+            }
+
+            else if (cmd == "time")
                 {
                     HandleServerTime(dt);
                 }
@@ -254,6 +258,8 @@ using Sfs2X.Logging;
             {
                 remoteAnim.setAnimatorValues(dt);
             }
+            else
+                print("nuuullll");
         }
     }
 

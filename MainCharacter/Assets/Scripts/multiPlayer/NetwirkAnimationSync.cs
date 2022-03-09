@@ -8,24 +8,21 @@ public class NetwirkAnimationSync : MonoBehaviour
     Animator anim;
     List<string> boolStates = new List<string>(){ "Jump", "TwistDance", "RumbaDance", "HipHopDance", "Sit" };
     List<string> floatStates = new List<string>() { "Speed", "MotionSpeed" };
-
+    private void Awake()
+    {
+        anim = GetComponent<Animator>();
+    }
 
     public void setAnimatorValues(ISFSObject dt)
     {
         for(int i=0;i<boolStates.Count;i++)
         {
-            if(dt.ContainsKey(boolStates[i]))
-            {
                 anim.SetBool(boolStates[i], dt.GetBool(boolStates[i]));
-            }
         }
 
         for (int i = 0; i < floatStates.Count; i++)
         {
-            if (dt.ContainsKey(floatStates[i]))
-            {
                 anim.SetFloat(floatStates[i], dt.GetFloat(floatStates[i]));
-            }
         }
 
     }
