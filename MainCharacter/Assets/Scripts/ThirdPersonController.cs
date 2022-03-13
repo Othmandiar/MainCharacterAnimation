@@ -89,8 +89,9 @@ namespace StarterAssets
 		private int _animIDFreeFall;
 		private int _animIDMotionSpeed;
 
-		private Animator _animator;
-		private CharacterController _controller;
+		private Animator _animator ;
+        public Animator animc;
+        private CharacterController _controller;
 		private StarterAssetsInputs _input;
 		private GameObject _mainCamera;
 
@@ -179,6 +180,7 @@ namespace StarterAssets
             {
                 wantToSit = false;
                 setFalseToAllDanceStates();
+                animc.SetBool("TwistDance", true);
                 _animator.SetBool("TwistDance", true);
             }
             if (Input.GetKeyDown(KeyCode.X))

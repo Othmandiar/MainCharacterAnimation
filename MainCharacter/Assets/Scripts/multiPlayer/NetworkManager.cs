@@ -33,16 +33,17 @@ using Sfs2X.Logging;
         {
             instance = this;
         smartFox = SmartFoxConnection.Connection;
+        if (smartFox == null)
+        {
+            SceneManager.LoadScene("singIn Scene");
+            return;
+        }
     }
 
         void Start()
         {
 
-            if (smartFox == null)
-            {
-                SceneManager.LoadScene("singIn Scene");
-                return;
-            }
+            
 
             SubscribeDelegates();
             SendSpawnRequest();
@@ -117,7 +118,6 @@ using Sfs2X.Logging;
         for (int i = 0; i < boolStates.Count; i++)
         {
             data.PutBool(boolStates[i].Key, boolStates[i].Value);
-            print(boolStates[i].Key + "   " + boolStates[i].Value.ToString());
         }
         for (int i = 0; i < floatStates.Count; i++)
         {
@@ -170,7 +170,6 @@ using Sfs2X.Logging;
                 }
             else if (cmd == "anim")
             {
-                print("yoooo");
                 HandleAnimation(dt);
             }
 

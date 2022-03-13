@@ -31,36 +31,36 @@ public class DynamicWheel : MonoBehaviour
     //{
     //    return !(PrefabUtility.GetPrefabInstanceStatus(gameObject) == PrefabInstanceStatus.NotAPrefab);
     //}
-//    void OnValidate()
-//    {
-//        if (!initialized)
-//        {
-//            initialized = true;
-//#if UNITY_EDITOR
-//            if (IsPrefab())
-//            {
-//                PrefabUtility.UnpackPrefabInstance(gameObject, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
-//            }
+    void OnValidate()
+    {
+        if (!initialized)
+        {
+            initialized = true;
+            //#if UNITY_EDITOR
+            //            if (IsPrefab())
+            //            {
+            //                PrefabUtility.UnpackPrefabInstance(gameObject, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+            //            }
 
-//#endif
-//        }
+            //#endif
+        }
 //        if (initialized)
 //        {
 //            UnityEditor.EditorApplication.delayCall += () =>
 //            {
 //                bool editorCheck = Application.isPlaying && autoUpdate && updateInPlaymode || !Application.isPlaying && autoUpdate;
-//#if UNITY_EDITOR
+////#if UNITY_EDITOR
 
-//                notInPrefabMode = UnityEditor.Experimental.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage() == null;
-//#endif
+////                notInPrefabMode = UnityEditor.Experimental.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage() == null;
+////#endif
 //                if (editorCheck && notInPrefabMode || editorCheck && !notInPrefabMode && !inEditor())
 //                {
 //                    notInPrefabMode = false;
 //                    GenerateWheel();
-//                }
+//}
 //            };
 //        }
-//    }
+    }
     void GenerateWheel()
     {
         ClearWheel();

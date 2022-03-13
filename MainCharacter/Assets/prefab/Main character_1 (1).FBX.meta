@@ -15,8 +15,7 @@ ModelImporter:
     resampleCurves: 1
     optimizeGameObjects: 0
     motionNodeName: 
-    rigImportErrors: "Invalid Avatar Rig Configuration. Missing or invalid transform:\n\tRequired
-      human bone 'Hips' not found\n"
+    rigImportErrors: 
     rigImportWarnings: 
     animationImportErrors: 
     animationImportWarnings: 
@@ -80,32 +79,7 @@ ModelImporter:
   humanDescription:
     serializedVersion: 3
     human: []
-    skeleton:
-    - name: Main character_1 (1)(Clone)
-      parentName: 
-      position: {x: 0, y: 0, z: 0}
-      rotation: {x: 0, y: 0, z: 0, w: 1}
-      scale: {x: 1, y: 1, z: 1}
-    - name: Low_Rex_Eye_L001
-      parentName: Main character_1 (1)(Clone)
-      position: {x: -0.06830498, y: 1.7524714, z: 0.13499112}
-      rotation: {x: -0.7071068, y: 0.00000006181724, z: 2.7021175e-15, w: 0.70710677}
-      scale: {x: 1, y: 1, z: 1}
-    - name: Low_Rex_Eye_R001
-      parentName: Main character_1 (1)(Clone)
-      position: {x: 0.06830499, y: 1.7524714, z: 0.1349911}
-      rotation: {x: -0.7071068, y: 0.00000006181724, z: 2.7021175e-15, w: 0.70710677}
-      scale: {x: 1, y: 1, z: 1}
-    - name: Low_Rex_Body001
-      parentName: Main character_1 (1)(Clone)
-      position: {x: -0, y: 0, z: 0}
-      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071068}
-      scale: {x: 1, y: 1, z: 1}
-    - name: Low_Rex_Tongue001
-      parentName: Main character_1 (1)(Clone)
-      position: {x: -0, y: 0, z: 0}
-      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071068}
-      scale: {x: 1, y: 1, z: 1}
+    skeleton: []
     armTwist: 0.5
     foreArmTwist: 0.5
     upperLegTwist: 0.5
