@@ -14,24 +14,24 @@ using Sfs2X.Logging;
 
 // The Network manager sends the messages to server and handles the response
 
-    public class NetworkManager : MonoBehaviour
+public class NetworkManager : MonoBehaviour
+{
+    private bool running = false;
+    private static NetworkManager instance;
+    public static NetworkManager Instance
     {
-        private bool running = false;
-    string singIn_Scene = "singIn Scene";
-        private static NetworkManager instance;
-        public static NetworkManager Instance
+        get
         {
-            get
-            {
-                return instance;
-            }
+            return instance;
         }
+    }
 
-        private SmartFox smartFox;  // The reference to SFS client
+    private SmartFox smartFox;  // The reference to SFS client
 
-        void Awake()
-        {
-            instance = this;
+    void Awake()
+    {
+        instance = null;
+        instance = this;
         smartFox = SmartFoxConnection.Connection;
         if (smartFox == null)
         {
@@ -40,81 +40,108 @@ using Sfs2X.Logging;
         }
     }
 
-        void Start()
-        {
+    void Start()
+    {
+        SubscribeDelegates();
+        SendSpawnRequest();
 
-            
+        TimeManager.Instance.Init();
 
-            SubscribeDelegates();
-            SendSpawnRequest();
+        running = true;
+    }
 
-            TimeManager.Instance.Init();
+    // This is needed to handle server events in queued mode
+    void FixedUpdate()
+    {
+        if (!running) return;
+        smartFox.ProcessEvents();
+    }
 
-            running = true;
-        }
+    private void SubscribeDelegates()
+    {
+        smartFox.AddEventListener(SFSEvent.EXTENSION_RESPONSE, OnExtensionResponse);
+        smartFox.AddEventListener(SFSEvent.USER_EXIT_ROOM, OnUserLeaveRoom);
+        smartFox.AddEventListener(SFSEvent.CONNECTION_LOST, OnConnectionLost);
+    }
 
-        // This is needed to handle server events in queued mode
-        void FixedUpdate()
-        {
-            if (!running) return;
-            smartFox.ProcessEvents();
-        }
+    private void UnsubscribeDelegates()
+    {
+        smartFox.RemoveAllEventListeners();
+    }
 
-        private void SubscribeDelegates()
-        {
-            smartFox.AddEventListener(SFSEvent.EXTENSION_RESPONSE, OnExtensionResponse);
-            smartFox.AddEventListener(SFSEvent.USER_EXIT_ROOM, OnUserLeaveRoom);
-            smartFox.AddEventListener(SFSEvent.CONNECTION_LOST, OnConnectionLost);
-        }
+    /// <summary>
+    /// Send the request to server to spawn my player
+    /// </summary>
+    public void SendSpawnRequest()
+    {
+        Room room = smartFox.LastJoinedRoom;
+        ExtensionRequest request = new ExtensionRequest("spawnMe", new SFSObject(), room);
+        smartFox.Send(request);
+    }
 
-        private void UnsubscribeDelegates()
-        {
-            smartFox.RemoveAllEventListeners();
-        }
+    public void SendAdminLiveEventListReq()
+    {
+        Room room = smartFox.LastJoinedRoom;
+        ExtensionRequest request = new ExtensionRequest("adminslive", new SFSObject(), room);
+        smartFox.Send(request);
+    }
 
-        /// <summary>
-        /// Send the request to server to spawn my player
-        /// </summary>
-        public void SendSpawnRequest()
-        {
-            Room room = smartFox.LastJoinedRoom;
-            ExtensionRequest request = new ExtensionRequest("spawnMe", new SFSObject(), room);
-            smartFox.Send(request);
-        }
-
-
-        /// <summary>
-        /// Send local transform to the server
-        /// </summary>
-        /// <param name="ntransform">
-        /// A <see cref="NetworkTransform"/>
-        /// </param>
-        public void SendTransform(NetworkTransform ntransform)
-        {
-            Room room = smartFox.LastJoinedRoom;
-            ISFSObject data = new SFSObject();
-            ntransform.ToSFSObject(data);
-
-            ExtensionRequest request = new ExtensionRequest("sendTransform", data, room); // True flag = UDP
-            smartFox.Send(request);
-        }
-
-        /// <summary>
-        /// Send local animation state to the server
-        /// </summary>
-        /// <param name="message">
-        /// A <see cref="System.String"/>
-        /// </param>
-        /// <param name="layer">
-        /// A <see cref="System.Int32"/>
-        /// </param>
-        /// 
+    public void SendUsersLiveEventListReq()
+    {
+        Room room = smartFox.LastJoinedRoom;
+        ExtensionRequest request = new ExtensionRequest("userslive", new SFSObject(), room);
+        smartFox.Send(request);
+    }
 
 
-        public void SendAnimationStates(List<KeyValuePair<string,bool>> boolStates, List<KeyValuePair<string, float>> floatStates)
-        {
-            Room room = smartFox.LastJoinedRoom;
-            ISFSObject data = new SFSObject();
+    public void SendChatRequest(string toName)
+    {
+        Room room = smartFox.LastJoinedRoom;
+        SFSObject sfsobj = new SFSObject();
+        sfsobj.PutUtfString("to", toName);
+        ExtensionRequest request = new ExtensionRequest("chat", sfsobj, room);
+        smartFox.Send(request);
+    }
+
+    public void SendPartnerListRequest()
+    {
+        Room room = smartFox.LastJoinedRoom;
+        ExtensionRequest request = new ExtensionRequest("PList", new SFSObject(), room);
+        smartFox.Send(request);
+    }
+
+    /// <summary>
+    /// Send local transform to the server
+    /// </summary>
+    /// <param name="ntransform">
+    /// A <see cref="NetworkTransform"/>
+    /// </param>
+    public void SendTransform(NetworkTransform ntransform)
+    {
+        Room room = smartFox.LastJoinedRoom;
+        ISFSObject data = new SFSObject();
+        ntransform.ToSFSObject(data);
+
+        ExtensionRequest request = new ExtensionRequest("sendTransform", data, room); // True flag = UDP
+        smartFox.Send(request);
+    }
+
+    /// <summary>
+    /// Send local animation state to the server
+    /// </summary>
+    /// <param name="message">
+    /// A <see cref="System.String"/>
+    /// </param>
+    /// <param name="layer">
+    /// A <see cref="System.Int32"/>
+    /// </param>
+    /// 
+
+
+    public void SendAnimationStates(List<KeyValuePair<string, bool>> boolStates, List<KeyValuePair<string, float>> floatStates)
+    {
+        Room room = smartFox.LastJoinedRoom;
+        ISFSObject data = new SFSObject();
         for (int i = 0; i < boolStates.Count; i++)
         {
             data.PutBool(boolStates[i].Key, boolStates[i].Value);
@@ -124,125 +151,152 @@ using Sfs2X.Logging;
             data.PutFloat(floatStates[i].Key, floatStates[i].Value);
         }
         ExtensionRequest request = new ExtensionRequest("sendAnim", data, room);
-            smartFox.Send(request);
-        }
+        smartFox.Send(request);
+    }
 
-        /// <summary>
-        /// Request the current server time. Used for time synchronization
-        /// </summary>	
-        public void TimeSyncRequest()
-        {
-            Room room = smartFox.LastJoinedRoom;
-            ExtensionRequest request = new ExtensionRequest("getTime", new SFSObject(), room);
-            smartFox.Send(request);
-        }
+    /// <summary>
+    /// Request the current server time. Used for time synchronization
+    /// </summary>	
+    public void TimeSyncRequest()
+    {
+        Room room = smartFox.LastJoinedRoom;
+        ExtensionRequest request = new ExtensionRequest("getTime", new SFSObject(), room);
+        smartFox.Send(request);
+    }
 
-        /// <summary>
-        /// When connection is lost we load the login scene
-        /// </summary>
-        private void OnConnectionLost(BaseEvent evt)
-        {
-            UnsubscribeDelegates();
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-            SceneManager.LoadScene(singIn_Scene);
-        }
+    /// <summary>
+    /// When connection is lost we load the login scene
+    /// </summary>
+    private void OnConnectionLost(BaseEvent evt)
+    {
+        UnsubscribeDelegates();
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        SceneManager.LoadScene(SceneNames.SingInScene);
+    }
 
-        // This method handles all the responses from the server
-        private void OnExtensionResponse(BaseEvent evt)
+    // This method handles all the responses from the server
+    private void OnExtensionResponse(BaseEvent evt)
+    {
+        try
         {
-            try
-            {
-                string cmd = (string)evt.Params["cmd"];
-                ISFSObject dt = (SFSObject)evt.Params["params"];
-            
+            string cmd = (string)evt.Params["cmd"];
+            ISFSObject dt = (SFSObject)evt.Params["params"];
+
             if (cmd == "spawnPlayer")
-                {
-                    HandleInstantiatePlayer(dt);
-                }
-                else if (cmd == "transform")
-                {
-                    HandleTransform(dt);
-                }
-                else if (cmd == "notransform")
-                {
+            {
+                HandleInstantiatePlayer(dt);
+            }
+            else if (cmd == "transform")
+            {
+                HandleTransform(dt);
+            }
+            else if (cmd == "notransform")
+            {
                 HandleNoTransform(dt);
-                }
+            }
             else if (cmd == "anim")
             {
                 HandleAnimation(dt);
             }
-
             else if (cmd == "time")
-                {
-                    HandleServerTime(dt);
-                }
-                
-            }
-            catch (Exception e)
             {
-                Debug.Log("Exception handling response: " + e.Message + " >>> " + e.StackTrace);
+                HandleServerTime(dt);
+            }
+            else if(cmd=="PList")
+            {
+                HandlePListe(dt);
+            }
+            else if(cmd == "chatReq")
+            {
+                HandleChatReq(dt);
             }
 
         }
-
-        // Instantiating player (our local FPS model, or remote 3rd person model)
-        private void HandleInstantiatePlayer(ISFSObject dt)
+        catch (Exception e)
         {
-            ISFSObject playerData = dt.GetSFSObject("player");
-            int userId = playerData.GetInt("id");
-            int score = playerData.GetInt("score");
-            NetworkTransform ntransform = NetworkTransform.FromSFSObject(playerData);
-
-            User user = smartFox.UserManager.GetUserById(userId);
-            string name = user.Name;
-            
-            if (userId == smartFox.MySelf.Id)
-            {
-                PlayerManager.Instance.SpawnPlayer(ntransform, name, score);
-            }
-            else
-            {
-                PlayerManager.Instance.SpawnEnemy(userId, ntransform, name, score);
-            }
+            Debug.Log("Exception handling response: " + e.Message + " >>> " + e.StackTrace);
         }
 
-        // Updating transform of the remote player from server
-        private void HandleTransform(ISFSObject dt)
+    }
+
+    void HandleChatReq(ISFSObject dt)
+    {
+        int userId = dt.GetInt("id");
+        if (userId == smartFox.MySelf.Id)
         {
-            int userId = dt.GetInt("id");
-            NetworkTransform ntransform = NetworkTransform.FromSFSObject(dt);
-            if (userId != smartFox.MySelf.Id)
-            {
+            PartnerScrollViewController scrollViewController = new PartnerScrollViewController();
+            scrollViewController.LoadPlistToScrollView(dt.GetUtfStringArray("PartnerList"));
+        }
+    }
+
+    void HandlePListe(ISFSObject dt)
+    {
+        int userId = dt.GetInt("id");
+        if(userId==smartFox.MySelf.Id)
+        {
+            PartnerScrollViewController scrollViewController=new PartnerScrollViewController();
+            scrollViewController.LoadPlistToScrollView(dt.GetUtfStringArray("PartnerList"));
+        }
+    }
+
+    // Instantiating player (our local FPS model, or remote 3rd person model)
+    private void HandleInstantiatePlayer(ISFSObject dt)
+    {
+        ISFSObject playerData = dt.GetSFSObject("player");
+        int userId = playerData.GetInt("id");
+        int score = playerData.GetInt("score");
+        NetworkTransform ntransform = NetworkTransform.FromSFSObject(playerData);
+
+        User user = smartFox.UserManager.GetUserById(userId);
+        string name = user.Name;
+
+        if (userId == smartFox.MySelf.Id)
+        {
+            PlayerManager.Instance.SpawnPlayer(ntransform, name, score);
+        }
+        else
+        {
+            PlayerManager.Instance.SpawnEnemy(userId, ntransform, name, score);
+        }
+    }
+
+    // Updating transform of the remote player from server
+    private void HandleTransform(ISFSObject dt)
+    {
+        int userId = dt.GetInt("id");
+        NetworkTransform ntransform = NetworkTransform.FromSFSObject(dt);
+        if (userId != smartFox.MySelf.Id)
+        {
             // Update transform of the remote user object
             NetworkTransformReceiver recipient = PlayerManager.Instance.GetRecipient(userId);
-                if (recipient != null)
-                {
-                    recipient.ReceiveTransform(ntransform);
-                }
-            }
-        }
-
-        // Server rejected transform message - force the local player object to what server said
-        private void HandleNoTransform(ISFSObject dt)
-        {
-            int userId = dt.GetInt("id");
-            NetworkTransform ntransform = NetworkTransform.FromSFSObject(dt);
-
-            if (userId == smartFox.MySelf.Id)
+            if (recipient != null)
             {
-                // Movement restricted!
-                // Update transform of the local object
-                ntransform.Update(PlayerManager.Instance.GetPlayerObject().transform);
+                recipient.ReceiveTransform(ntransform);
             }
         }
+    }
 
-        // Synchronize the time from server
-        private void HandleServerTime(ISFSObject dt)
+    // Server rejected transform message - force the local player object to what server said
+    private void HandleNoTransform(ISFSObject dt)
+    {
+        int userId = dt.GetInt("id");
+        NetworkTransform ntransform = NetworkTransform.FromSFSObject(dt);
+
+        if (userId == smartFox.MySelf.Id)
         {
-            long time = dt.GetLong("t");
-            TimeManager.Instance.Synchronize(Convert.ToDouble(time));
+            // Movement restricted!
+            // Update transform of the local object
+            ntransform.Update(PlayerManager.Instance.GetPlayerObject().transform);
         }
+    }
+
+    // Synchronize the time from server
+    private void HandleServerTime(ISFSObject dt)
+    {
+        long time = dt.GetLong("t");
+        TimeManager.Instance.Synchronize(Convert.ToDouble(time));
+    }
 
 
     // Synchronizing remote animation
@@ -257,43 +311,22 @@ using Sfs2X.Logging;
             {
                 remoteAnim.setAnimatorValues(dt);
             }
-            else
-                print("nuuullll");
         }
     }
 
-    // When someon shots handle it and play corresponding animation 
-    private void HandleShotFired(ISFSObject dt)
-        {
-            int userId = dt.GetInt("id");
-            if (userId != smartFox.MySelf.Id)
-            {
-                //SoundManager.Instance.PlayShot(PlayerManager.Instance.GetRecipient(userId).GetComponent<AudioSource>());
-                //PlayerManager.Instance.SyncAnimation(userId, "Shot", 1);
-            }
-            else
-            {
-                GameObject obj = PlayerManager.Instance.GetPlayerObject();
-                if (obj == null) return;
 
-                //SoundManager.Instance.PlayShot(obj.GetComponent<AudioSource>());
-                //obj.GetComponent<AnimationSynchronizer>().PlayShotAnimation();
-            }
-        }
+    // When a user leaves room destroy his object
+    private void OnUserLeaveRoom(BaseEvent evt)
+    {
+        User user = (User)evt.Params["user"];
+        Room room = (Room)evt.Params["room"];
 
-        
-        // When a user leaves room destroy his object
-        private void OnUserLeaveRoom(BaseEvent evt)
-        {
-            User user = (User)evt.Params["user"];
-            Room room = (Room)evt.Params["room"];
-
-            PlayerManager.Instance.DestroyEnemy(user.Id);
-            Debug.Log("User " + user.Name + " left");
-        }
-
-        void OnApplicationQuit()
-        {
-            UnsubscribeDelegates();
-        }
+        PlayerManager.Instance.DestroyEnemy(user.Id);
+        Debug.Log("User " + user.Name + " left");
     }
+
+    void OnApplicationQuit()
+    {
+        UnsubscribeDelegates();
+    }
+}

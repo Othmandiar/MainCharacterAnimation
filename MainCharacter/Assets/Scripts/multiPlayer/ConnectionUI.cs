@@ -20,12 +20,12 @@ using Sfs2X.Requests;
     public InputField nameInput;
     public Button loginButton;
         public Text errorText;
+    public Text connectState;
+    //----------------------------------------------------------
+    // Private properties
+    //----------------------------------------------------------
 
-        //----------------------------------------------------------
-        // Private properties
-        //----------------------------------------------------------
-
-        private SmartFox sfs;
+    private SmartFox sfs;
     string sceneNameToLoad = "MainScene";
         //----------------------------------------------------------
         // Unity calback methods
@@ -71,11 +71,11 @@ using Sfs2X.Requests;
             cfg.Zone = "mainProject";
 
         // Initialize SFS2X client and add listeners
-//#if !UNITY_WEBGL
+#if !UNITY_WEBGL
                   sfs = new SmartFox();
-//#else
-//        sfs = new SmartFox(UseWebSocket.WS_BIN);
-//#endif
+#else
+        sfs = new SmartFox(UseWebSocket.WS_BIN,true);
+#endif
         sfs.AddEventListener(SFSEvent.CONNECTION, OnConnection);
             sfs.AddEventListener(SFSEvent.CONNECTION_LOST, OnConnectionLost);
             sfs.AddEventListener(SFSEvent.LOGIN, OnLogin);
@@ -84,7 +84,7 @@ using Sfs2X.Requests;
             sfs.AddEventListener(SFSEvent.ROOM_JOIN_ERROR, OnRoomJoinError);
             // Connect to SFS2X
             sfs.Connect(cfg);
-        }
+    }
 
         private void reset()
         {
@@ -100,27 +100,30 @@ using Sfs2X.Requests;
 
         private void OnConnection(BaseEvent evt)
         {
-            if ((bool)evt.Params["success"])
+        connectState.text = "OnConnection";
+        if ((bool)evt.Params["success"])
             {
                 // Save reference to the SmartFox instance in a static field, to share it among different scenes
                 SmartFoxConnection.Connection = sfs;
-                // Login
-                sfs.Send(new Sfs2X.Requests.LoginRequest(nameInput.text));
+            // Login
+            connectState.text = "OnConnection success";
+            sfs.Send(new Sfs2X.Requests.LoginRequest(nameInput.text));
             }
             else
             {
             // Remove SFS2X listeners and re-enable interface
             reset();
-
-                // Show error message
-                errorText.text = "Connection failed; is the server running at all?";
+            connectState.text = "OnConnection faild";
+            // Show error message
+            errorText.text = "Connection failed; is the server running at all?";
             }
         }
 
         private void OnConnectionLost(BaseEvent evt)
         {
-            // Remove SFS2X listeners and re-enable interface
-            reset();
+        connectState.text = "OnConnectionLost";
+        // Remove SFS2X listeners and re-enable interface
+        reset();
 
             string reason = (string)evt.Params["reason"];
 
@@ -133,7 +136,8 @@ using Sfs2X.Requests;
 
         private void OnLogin(BaseEvent evt)
         {
-            string roomName = "room";
+        connectState.text = "OnLogin";
+        string roomName = "room";
         // We either create the Game Room or join it if it exists already
         // if (sfs.RoomManager.ContainsRoom(roomName)){
         sfs.Send(new JoinRoomRequest(roomName));
@@ -148,6 +152,7 @@ using Sfs2X.Requests;
 
         private void OnLoginError(BaseEvent evt)
         {
+        connectState.text = "OnLoginError";
         // Disconnect
         sfs.Disconnect();
 
@@ -160,11 +165,12 @@ using Sfs2X.Requests;
 
         private void OnRoomJoin(BaseEvent evt)
         {
+        connectState.text = "OnRoomJoin";
             // Remove SFS2X listeners and re-enable interface before moving to the main game scene
             reset();
 
         // Go to main game scene
-        SceneManager.LoadScene(sceneNameToLoad);
+        SceneManager.LoadScene(SceneNames.MainScene);
         }
 
         private void OnRoomJoinError(BaseEvent evt)

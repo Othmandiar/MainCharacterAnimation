@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine.SceneManagement;
 #if ENABLE_INPUT_SYSTEM && STARTER_ASSETS_PACKAGES_CHECKED
 using UnityEngine.InputSystem;
 #endif
@@ -16,6 +17,7 @@ namespace StarterAssets
 #endif
 	public class ThirdPersonController : MonoBehaviour
 	{
+        public SFSceneChanger sFScene;
         public GameObject wheelUi;
         public GameObject parent;
 		[Header("Player")]
@@ -79,7 +81,7 @@ namespace StarterAssets
 		private float _terminalVelocity = 53.0f;
 
 		// timeout deltatime
-		private float _jumpTimeoutDelta, desiredY;
+		private float _jumpTimeoutDelta, desiredY, timeToSendPListRequest=0;
 		private float _fallTimeoutDelta;
 
 		// animation IDs
@@ -97,14 +99,15 @@ namespace StarterAssets
 
 		private const float _threshold = 0.01f;
 
-        private bool _hasAnimator,inAreaToSit=false, wantToSit=false, setDesiredY = false;
+        private bool _hasAnimator,inAreaToSit=false, wantToSit=false, setDesiredY = false, canLoadEventScene=false;
         GameObject chair;
         GameState gameState = new GameState();
 
         private void Awake()
 		{
-			// get a reference to our main camera
-			if (_mainCamera == null)
+            sFScene = GameObject.FindGameObjectWithTag("networkManger").GetComponent<SFSceneChanger>();
+            // get a reference to our main camera
+            if (_mainCamera == null)
 			{
 				_mainCamera = GameObject.FindGameObjectWithTag("MainCamera");
 			}
@@ -164,6 +167,12 @@ namespace StarterAssets
         private void Update()
 		{
 			_hasAnimator = TryGetComponent(out _animator);
+            
+            if (canLoadEventScene&&Input.GetKeyDown(KeyCode.L))
+            {
+                sFScene.JoinLiveEventRoom();
+                return;
+            }
             if(Input.GetKeyDown(KeyCode.Tab))
             {
                 wheelUi.active = true;
@@ -312,6 +321,18 @@ namespace StarterAssets
 			// if there is a move input rotate player when the player is moving
 			if (_input.move != Vector2.zero)
 			{
+                try
+                {
+                    _targetRotation = Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg + _mainCamera.transform.eulerAngles.y;
+                }
+                catch
+                {
+                    if (_mainCamera == null)
+                        print("_mainCamera");
+                    if (_targetRotation == null)
+                        print("_targetRotation");
+
+                }
 				_targetRotation = Mathf.Atan2(inputDirection.x, inputDirection.z) * Mathf.Rad2Deg + _mainCamera.transform.eulerAngles.y;
 				float rotation = Mathf.SmoothDampAngle(transform.eulerAngles.y, _targetRotation, ref _rotationVelocity, RotationSmoothTime);
 
@@ -380,6 +401,17 @@ namespace StarterAssets
                 inAreaToSit = true;
                 chair = other.gameObject;
             }
+
+            if (other.gameObject.tag == "goToEvent")
+            {
+                canLoadEventScene = true;
+            }
+            
+        }
+
+        void loadLiveEventScene()
+        {
+            SceneManager.LoadScene(SceneNames.LiveEventsScene);
         }
 
         private void OnTriggerExit(Collider other)
@@ -388,6 +420,11 @@ namespace StarterAssets
             {
                 inAreaToSit = false;
                 chair = null;
+            }
+
+            if (other.gameObject.tag == "goToEvent")
+            {
+                canLoadEventScene = false;
             }
         }
 
