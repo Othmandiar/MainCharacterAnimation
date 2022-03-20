@@ -74,8 +74,9 @@ using Sfs2X.Requests;
 #if !UNITY_WEBGL
                   sfs = new SmartFox();
 #else
-        sfs = new SmartFox(UseWebSocket.WS_BIN,true);
+        sfs = new SmartFox(UseWebSocket.WS_BIN);
 #endif
+
         sfs.AddEventListener(SFSEvent.CONNECTION, OnConnection);
             sfs.AddEventListener(SFSEvent.CONNECTION_LOST, OnConnectionLost);
             sfs.AddEventListener(SFSEvent.LOGIN, OnLogin);

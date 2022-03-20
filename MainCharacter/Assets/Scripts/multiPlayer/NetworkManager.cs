@@ -256,8 +256,8 @@ public class NetworkManager : MonoBehaviour
         int userId = dt.GetInt("toId");
         if (userId == smartFox.MySelf.Id)
         {
-            PartnerScrollViewController scrollViewController = new PartnerScrollViewController();
-            scrollViewController.LoadPlistToScrollView(dt.GetUtfStringArray("PartnerList"));
+
+
         }
     }
 
