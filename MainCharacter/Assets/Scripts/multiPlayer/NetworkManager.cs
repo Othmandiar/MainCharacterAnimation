@@ -17,6 +17,7 @@ using Sfs2X.Logging;
 public class NetworkManager : MonoBehaviour
 {
     private bool running = false;
+    public  Dictionary<int, uint> PlayersInfo = new Dictionary<int, uint>();
     private static NetworkManager instance;
     public static NetworkManager Instance
     {
@@ -26,7 +27,7 @@ public class NetworkManager : MonoBehaviour
         }
     }
 
-    private SmartFox smartFox;  // The reference to SFS client
+    public SmartFox smartFox;  // The reference to SFS client
 
     void Awake()
     {
@@ -35,7 +36,7 @@ public class NetworkManager : MonoBehaviour
         smartFox = SmartFoxConnection.Connection;
         if (smartFox == null)
         {
-            SceneManager.LoadScene("singIn Scene");
+            SceneManager.LoadScene(SceneNames.SingInScene);
             return;
         }
     }
@@ -50,11 +51,40 @@ public class NetworkManager : MonoBehaviour
         running = true;
     }
 
+    public void OnUserVariableUpdate(BaseEvent evt)
+    {
+        List<string> changedVars = (List<string>)evt.Params["changedVars"];
+        SFSUser user = (SFSUser)evt.Params["user"];
+        
+        if (user.Id == smartFox.MySelf.Id || SceneManager.GetActiveScene().name!=SceneNames.LiveEventsScene) return;
+        print("myself  " + smartFox.MySelf.Id + "  user  " + user.Id + " SceneName  " + SceneManager.GetActiveScene().name);
+        if (PlayersInfo.ContainsKey(user.Id))
+        {
+            print("PlayersInfo.ContainsKey(user.Id) ");
+            if (changedVars.Contains("agoraID"))
+            {
+                PlayersInfo[user.Id] = uint.Parse( user.GetVariable("agoraID").GetStringValue());
+            }
+            if(changedVars.Contains("isAdmin"))
+            {
+               
+                bool isAdmin= user.GetVariable("isAdmin").GetBoolValue();
+                print("Update UserVariable  " + user.Id + "    isAdmin " + isAdmin);
+                if (isAdmin)
+                     VoiceChatManager.Instance.setRemotePlayerToAdmin(PlayersInfo[user.Id]);
+                else
+                    VoiceChatManager.Instance.mutePlayer(PlayersInfo[user.Id]);
+            }
+
+        }
+
+    }
+
     // This is needed to handle server events in queued mode
     void FixedUpdate()
     {
         if (!running) return;
-        smartFox.ProcessEvents();
+            smartFox.ProcessEvents();
     }
 
     private void SubscribeDelegates()
@@ -62,6 +92,7 @@ public class NetworkManager : MonoBehaviour
         smartFox.AddEventListener(SFSEvent.EXTENSION_RESPONSE, OnExtensionResponse);
         smartFox.AddEventListener(SFSEvent.USER_EXIT_ROOM, OnUserLeaveRoom);
         smartFox.AddEventListener(SFSEvent.CONNECTION_LOST, OnConnectionLost);
+        smartFox.AddEventListener(SFSEvent.USER_VARIABLES_UPDATE, OnUserVariableUpdate);
     }
 
     private void UnsubscribeDelegates()
@@ -222,7 +253,7 @@ public class NetworkManager : MonoBehaviour
 
     void HandleChatReq(ISFSObject dt)
     {
-        int userId = dt.GetInt("id");
+        int userId = dt.GetInt("toId");
         if (userId == smartFox.MySelf.Id)
         {
             PartnerScrollViewController scrollViewController = new PartnerScrollViewController();
@@ -245,7 +276,6 @@ public class NetworkManager : MonoBehaviour
     {
         ISFSObject playerData = dt.GetSFSObject("player");
         int userId = playerData.GetInt("id");
-        int score = playerData.GetInt("score");
         NetworkTransform ntransform = NetworkTransform.FromSFSObject(playerData);
 
         User user = smartFox.UserManager.GetUserById(userId);
@@ -253,11 +283,19 @@ public class NetworkManager : MonoBehaviour
 
         if (userId == smartFox.MySelf.Id)
         {
-            PlayerManager.Instance.SpawnPlayer(ntransform, name, score);
+            PlayerManager.Instance.SpawnPlayer(ntransform, name);
         }
         else
         {
-            PlayerManager.Instance.SpawnEnemy(userId, ntransform, name, score);
+            
+            PlayerManager.Instance.SpawnEnemy(userId, ntransform, name);
+            
+        }
+
+        if(SceneManager.GetActiveScene().name==SceneNames.LiveEventsScene)
+        {
+            print("add    " + userId + "  SceneName  " + SceneManager.GetActiveScene().name);
+            PlayersInfo.Add(userId,uint.MaxValue);
         }
     }
 
@@ -320,7 +358,7 @@ public class NetworkManager : MonoBehaviour
     {
         User user = (User)evt.Params["user"];
         Room room = (Room)evt.Params["room"];
-
+        PlayersInfo.Clear();
         PlayerManager.Instance.DestroyEnemy(user.Id);
         Debug.Log("User " + user.Name + " left");
     }
