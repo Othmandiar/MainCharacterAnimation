@@ -17,7 +17,8 @@ using Sfs2X.Logging;
 public class NetworkManager : MonoBehaviour
 {
     private bool running = false;
-    public  Dictionary<int, uint> PlayersInfo = new Dictionary<int, uint>();
+    public  Dictionary<int, uint> smartToAgoraID = new Dictionary<int, uint>();
+    public Dictionary<int, string> smartIdToname = new Dictionary<int, string>();
     private static NetworkManager instance;
     public static NetworkManager Instance
     {
@@ -57,25 +58,20 @@ public class NetworkManager : MonoBehaviour
         SFSUser user = (SFSUser)evt.Params["user"];
         
         if (user.Id == smartFox.MySelf.Id || SceneManager.GetActiveScene().name!=SceneNames.LiveEventsScene) return;
-        print("myself  " + smartFox.MySelf.Id + "  user  " + user.Id + " SceneName  " + SceneManager.GetActiveScene().name);
-        if (PlayersInfo.ContainsKey(user.Id))
+        if (smartToAgoraID.ContainsKey(user.Id))
         {
-            print("PlayersInfo.ContainsKey(user.Id) ");
             if (changedVars.Contains("agoraID"))
             {
-                PlayersInfo[user.Id] = uint.Parse( user.GetVariable("agoraID").GetStringValue());
+                smartToAgoraID[user.Id] = uint.Parse( user.GetVariable("agoraID").GetStringValue());
             }
             if(changedVars.Contains("isAdmin"))
             {
-               
                 bool isAdmin= user.GetVariable("isAdmin").GetBoolValue();
-                print("Update UserVariable  " + user.Id + "    isAdmin " + isAdmin);
                 if (isAdmin)
-                     VoiceChatManager.Instance.setRemotePlayerToAdmin(PlayersInfo[user.Id]);
+                     VoiceChatManager.Instance.setRemotePlayerToAdmin(smartToAgoraID[user.Id]);
                 else
-                    VoiceChatManager.Instance.mutePlayer(PlayersInfo[user.Id]);
+                    VoiceChatManager.Instance.mutePlayer(smartToAgoraID[user.Id]);
             }
-
         }
 
     }
@@ -110,27 +106,15 @@ public class NetworkManager : MonoBehaviour
         smartFox.Send(request);
     }
 
-    public void SendAdminLiveEventListReq()
-    {
-        Room room = smartFox.LastJoinedRoom;
-        ExtensionRequest request = new ExtensionRequest("adminslive", new SFSObject(), room);
-        smartFox.Send(request);
-    }
-
-    public void SendUsersLiveEventListReq()
-    {
-        Room room = smartFox.LastJoinedRoom;
-        ExtensionRequest request = new ExtensionRequest("userslive", new SFSObject(), room);
-        smartFox.Send(request);
-    }
-
 
     public void SendChatRequest(string toName)
     {
+        print("send to " + toName); 
         Room room = smartFox.LastJoinedRoom;
         SFSObject sfsobj = new SFSObject();
-        sfsobj.PutUtfString("to", toName);
-        ExtensionRequest request = new ExtensionRequest("chat", sfsobj, room);
+        
+        sfsobj.PutInt("to", smartFox.UserManager.GetUserByName(toName).Id);
+        ExtensionRequest request = new ExtensionRequest("chatReq", sfsobj, room);
         smartFox.Send(request);
     }
 
@@ -242,7 +226,14 @@ public class NetworkManager : MonoBehaviour
             {
                 HandleChatReq(dt);
             }
-
+            else if (cmd == "ansChatReq")
+            {
+                HandleAnsChatReq(dt);
+            }
+            else if(cmd == "closeChatReq")
+            {
+                closeChatRequestHandler(dt);
+            }
         }
         catch (Exception e)
         {
@@ -251,12 +242,58 @@ public class NetworkManager : MonoBehaviour
 
     }
 
-    void HandleChatReq(ISFSObject dt)
+    public void SendCloseChatRequest(int smartId)
+    {
+        Room room = smartFox.LastJoinedRoom;
+        SFSObject sfsobj = new SFSObject();
+
+        sfsobj.PutInt("to", smartId);
+        ExtensionRequest request = new ExtensionRequest("closeChatReq", sfsobj, room);
+        smartFox.Send(request);
+    }
+
+    void closeChatRequestHandler(ISFSObject dt)
     {
         int userId = dt.GetInt("toId");
         if (userId == smartFox.MySelf.Id)
         {
+            ChatReqCanvasManger.Instance.closeChatWithPartnerRemotly(dt.GetInt("fromId"));
+        }
+    }
 
+    public void sendAnswerForChatReq(int id, bool ans)
+    {
+
+        Room room = smartFox.LastJoinedRoom;
+        ISFSObject data = new SFSObject();
+        data.PutInt("to", id);
+        data.PutBool("ans", ans);
+        ExtensionRequest request = new ExtensionRequest("ansChatReq", data, room); // True flag = UDP
+        smartFox.Send(request);
+
+    }
+
+    void HandleAnsChatReq(ISFSObject dt)
+    {
+        int userId = dt.GetInt("toId");
+        if (userId == smartFox.MySelf.Id)
+        {
+            print("HandleAnsChatReq  " + dt.GetBool("ans"));
+        }
+    }
+
+    void HandleChatReq(ISFSObject dt)
+    {
+        if(dt.GetUtfString("null") !=null)
+        {
+            print("HandleChatReq name is null");
+            return;
+        }
+        int userId = dt.GetInt("toId");
+        if (userId == smartFox.MySelf.Id)
+        {
+            int from = dt.GetInt("fromId");
+            ChatReqCanvasManger.Instance.chatReqCanvasActive(true, smartFox.UserManager.GetUserById(from).Name, from);
 
         }
     }
@@ -277,7 +314,7 @@ public class NetworkManager : MonoBehaviour
         ISFSObject playerData = dt.GetSFSObject("player");
         int userId = playerData.GetInt("id");
         NetworkTransform ntransform = NetworkTransform.FromSFSObject(playerData);
-
+        
         User user = smartFox.UserManager.GetUserById(userId);
         string name = user.Name;
 
@@ -287,15 +324,13 @@ public class NetworkManager : MonoBehaviour
         }
         else
         {
-            
             PlayerManager.Instance.SpawnEnemy(userId, ntransform, name);
-            
         }
 
         if(SceneManager.GetActiveScene().name==SceneNames.LiveEventsScene)
         {
-            print("add    " + userId + "  SceneName  " + SceneManager.GetActiveScene().name);
-            PlayersInfo.Add(userId,uint.MaxValue);
+            smartToAgoraID.Add(userId,uint.MaxValue);
+            VoiceChatManager.Instance.SendAgoraID();
         }
     }
 
@@ -358,7 +393,7 @@ public class NetworkManager : MonoBehaviour
     {
         User user = (User)evt.Params["user"];
         Room room = (Room)evt.Params["room"];
-        PlayersInfo.Clear();
+        smartToAgoraID.Clear();
         PlayerManager.Instance.DestroyEnemy(user.Id);
         Debug.Log("User " + user.Name + " left");
     }

@@ -24,7 +24,7 @@ public class PartnerButton : MonoBehaviour
         if(timeToSendReq<=Time.time)
         {
             NetworkManager.Instance.SendChatRequest(name);
-            timeToSendReq = Time.time + 4f;
+            timeToSendReq = Time.time + 2f;
         }
 
     }

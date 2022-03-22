@@ -105,6 +105,7 @@ namespace StarterAssets
 
         private void Awake()
 		{
+            Cursor.lockState = CursorLockMode.Locked;
             sFScene = GameObject.FindGameObjectWithTag("networkManger").GetComponent<SFSceneChanger>();
             // get a reference to our main camera
             if (_mainCamera == null)
@@ -121,7 +122,6 @@ namespace StarterAssets
 			_input = GetComponent<StarterAssetsInputs>();
 
 			AssignAnimationIDs();
-
 			// reset our timeouts on start
 			_jumpTimeoutDelta = JumpTimeout;
 			_fallTimeoutDelta = FallTimeout;

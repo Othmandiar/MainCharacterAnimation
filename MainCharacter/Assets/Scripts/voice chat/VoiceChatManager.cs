@@ -16,7 +16,8 @@ public class VoiceChatManager : MonoBehaviour
     string appID = "9e636eb0b6a9455bb0ea9ca2d60c5665";
     public Text tt;
     public static VoiceChatManager Instance;
-    public static Dictionary<int, int> smartToAgoraID=new Dictionary<int, int>();
+    public Dictionary<int, uint> partnerTempChat=new Dictionary<int, uint>();
+    uint myAgoraID;
     IRtcEngine rtcEngine;
     SmartFox smartFox;
     AgoraChannel channel;
@@ -63,6 +64,17 @@ public class VoiceChatManager : MonoBehaviour
 
     }
 
+    public void SendAgoraID()
+    {
+        if(isJoinedChannel)
+        {
+            List<UserVariable> userVariables = new List<UserVariable>();
+            userVariables.Add(new SFSUserVariable("agoraID", myAgoraID.ToString()));
+            NetworkManager.Instance.smartFox.Send(new SetUserVariablesRequest(userVariables));
+        }
+
+    }
+
     void OnError(int error, string msg)
     {
         Debug.LogError("Error with Agora: " + msg);
@@ -76,26 +88,21 @@ public class VoiceChatManager : MonoBehaviour
 
     void OnJoinChannelSuccess(string channelName, uint uid, int elapsed)
     {
+        myAgoraID = uid;
         Debug.Log("Joined channel " + channelName + " uint  "+ uid);
         isJoinedChannel = true;
-        if (NetworkManager.Instance.PlayersInfo.ContainsKey(smartFox.MySelf.Id))
+        if (NetworkManager.Instance.smartToAgoraID.ContainsKey(smartFox.MySelf.Id))
         {
             
-           // NetworkManager.Instance.PlayersInfo[smartFox.MySelf.Id] = uid;
-            List<UserVariable> userVariables = new List<UserVariable>();
-            userVariables.Add(new SFSUserVariable("agoraID", uid.ToString()));
-            NetworkManager.Instance.smartFox.Send(new SetUserVariablesRequest(userVariables));
+            NetworkManager.Instance.smartToAgoraID[smartFox.MySelf.Id] = uid;
+            SendAgoraID();
         }
         else
         {
-            //NetworkManager.Instance.PlayersInfo.Add(smartFox.MySelf.Id, uid);
-            List<UserVariable> userVariables = new List<UserVariable>();
-            userVariables.Add(new SFSUserVariable("agoraID", uid.ToString()));
-            NetworkManager.Instance.smartFox.Send(new SetUserVariablesRequest(userVariables));
+            NetworkManager.Instance.smartToAgoraID.Add(smartFox.MySelf.Id, uid);
+            SendAgoraID();
         }
         tt.text = uid.ToString();
-        NetworkManager.Instance.SendAdminLiveEventListReq();
-        NetworkManager.Instance.SendUsersLiveEventListReq();
     }
 
 
@@ -109,6 +116,27 @@ public class VoiceChatManager : MonoBehaviour
         IRtcEngine.Destroy();
     }
 
+    public void makeTempVoiceChatWithPartner(int smartID)
+    {
+        if(!partnerTempChat.ContainsKey(smartID))
+        {
+            uint partnerAgoraId = NetworkManager.Instance.smartToAgoraID[smartID];
+            partnerTempChat.Add(smartID, partnerAgoraId);
+            setRemotePlayerToAdmin(partnerAgoraId);
+        }
+    }
+
+    public void closeTempVoiceChatWithPartner(int smartID)
+    {
+        if (partnerTempChat.ContainsKey(smartID))
+        {
+            uint partnerAgoraId = NetworkManager.Instance.smartToAgoraID[smartID];
+            partnerTempChat.Remove(smartID);
+            mutePlayer(partnerAgoraId);
+        }
+    }
+
+
     public void setRemotePlayerToAdmin(uint id)
     {
         //int test = rtcEngine.GetAudioEffectManager().SetRemoteVoicePosition(id, 0f, 100f);
@@ -118,9 +146,10 @@ public class VoiceChatManager : MonoBehaviour
 
     public void mutePlayer(uint id)
     {
-        print("mutePlayer agoraID  "+ id + "   myself id  "+NetworkManager.Instance.PlayersInfo[ SmartFoxConnection.Connection.MySelf.Id] );
+        print("mutePlayer agoraID  "+ id + "   myself id  "+NetworkManager.Instance.smartToAgoraID[ SmartFoxConnection.Connection.MySelf.Id] );
         //int test= rtcEngine.GetAudioEffectManager().SetRemoteVoicePosition(id, 0f,0f);
-        rtcEngine.AdjustUserPlaybackSignalVolume(id, 0);
+        int t= rtcEngine.AdjustUserPlaybackSignalVolume(id, 0);
+        print(t);
         //print(" agoraAudioEffects call  mutePlayer " + test);
     }
 
