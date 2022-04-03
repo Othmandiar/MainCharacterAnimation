@@ -18,13 +18,14 @@ public class NetworkManager : MonoBehaviour
 {
     private bool running = false;
     public  Dictionary<int, uint> smartToAgoraID = new Dictionary<int, uint>();
-    public Dictionary<int, string> smartIdToname = new Dictionary<int, string>();
+    public Dictionary<uint, bool> streamAgoraIsAdmin = new Dictionary<uint, bool>();
     private static NetworkManager instance;
     public static NetworkManager Instance
     {
         get
         {
             return instance;
+            
         }
     }
 
@@ -57,22 +58,40 @@ public class NetworkManager : MonoBehaviour
         List<string> changedVars = (List<string>)evt.Params["changedVars"];
         SFSUser user = (SFSUser)evt.Params["user"];
         
-        if (user.Id == smartFox.MySelf.Id || SceneManager.GetActiveScene().name!=SceneNames.LiveEventsScene) return;
-        if (smartToAgoraID.ContainsKey(user.Id))
+        if (user.Id == smartFox.MySelf.Id) return;
+        if(SceneManager.GetActiveScene().name == SceneNames.LiveEventsScene || SceneManager.GetActiveScene().name == SceneNames.StreamEventsScene)
         {
-            if (changedVars.Contains("agoraID"))
+            if (smartToAgoraID.ContainsKey(user.Id))
             {
-                smartToAgoraID[user.Id] = uint.Parse( user.GetVariable("agoraID").GetStringValue());
-            }
-            if(changedVars.Contains("isAdmin"))
-            {
-                bool isAdmin= user.GetVariable("isAdmin").GetBoolValue();
-                if (isAdmin)
-                     VoiceChatManager.Instance.setRemotePlayerToAdmin(smartToAgoraID[user.Id]);
-                else
-                    VoiceChatManager.Instance.mutePlayer(smartToAgoraID[user.Id]);
+                if (changedVars.Contains("agoraID"))
+                {
+                    smartToAgoraID[user.Id] = uint.Parse(user.GetVariable("agoraID").GetStringValue());
+                }
+                if (changedVars.Contains("isAdmin"))
+                {
+                    bool isAdmin = user.GetVariable("isAdmin").GetBoolValue();
+                    if(SceneManager.GetActiveScene().name == SceneNames.LiveEventsScene)
+                    {
+                        if (isAdmin)
+                            VoiceChatManager.Instance.setRemotePlayerToAdmin(smartToAgoraID[user.Id]);
+                        else
+                            VoiceChatManager.Instance.mutePlayer(smartToAgoraID[user.Id]);
+                    }
+                    else
+                    {
+                        if (isAdmin)
+                            StreamConnection.instance.setRemotePlayerToAdmin(smartToAgoraID[user.Id]);
+                        else
+                            StreamConnection.instance.mutePlayer(smartToAgoraID[user.Id]);
+
+                        print("isAdmin in OnUserVariableUpdate   is admin  "+isAdmin);
+                    }
+                    
+                }
             }
         }
+        
+       
 
     }
 
@@ -114,6 +133,16 @@ public class NetworkManager : MonoBehaviour
         SFSObject sfsobj = new SFSObject();
         
         sfsobj.PutInt("to", smartFox.UserManager.GetUserByName(toName).Id);
+        ExtensionRequest request = new ExtensionRequest("chatReq", sfsobj, room);
+        smartFox.Send(request);
+    }
+
+    public void SendChatRequest(int to)
+    {
+        Room room = smartFox.LastJoinedRoom;
+        SFSObject sfsobj = new SFSObject();
+
+        sfsobj.PutInt("to", to);
         ExtensionRequest request = new ExtensionRequest("chatReq", sfsobj, room);
         smartFox.Send(request);
     }
@@ -234,11 +263,58 @@ public class NetworkManager : MonoBehaviour
             {
                 closeChatRequestHandler(dt);
             }
+            else if (cmd == "TXTChatRequest")
+            {
+                textChatMsgRequestHandler(dt);
+            }
+            else if(cmd == "LoadTXTChatRequest")
+            {
+                loadTxtChatReqHandler(dt);
+            }
         }
         catch (Exception e)
         {
             Debug.Log("Exception handling response: " + e.Message + " >>> " + e.StackTrace);
         }
+
+    }
+
+    void sendLoadTxtChatReq()
+    {
+        Room room = smartFox.LastJoinedRoom;
+        SFSObject sfsobj = new SFSObject();
+        ExtensionRequest request = new ExtensionRequest("loadTxtChatReq", sfsobj, room);
+        smartFox.Send(request);
+    }
+
+    void loadTxtChatReqHandler(ISFSObject dt)
+    {
+        print("in loadTxtChatReqHandler");
+        string [] msgs = dt.GetUtfStringArray("msgs");
+        string[] senders = dt.GetUtfStringArray("senders");
+        for(int i=0;i<msgs.Length;i++)
+        {
+            TextChatManger.instance.addMsgToView(senders[i]+ "/n" + msgs[i]);
+        }
+
+
+    }
+
+    public void SendTextChatMsgRequest(string msg)
+    {
+        Room room = smartFox.LastJoinedRoom;
+        SFSObject sfsobj = new SFSObject();
+        sfsobj.PutUtfString("name", smartFox.MySelf.Name);
+        sfsobj.PutUtfString("msg", msg);
+        ExtensionRequest request = new ExtensionRequest("txtChatReq", sfsobj, room);
+        smartFox.Send(request);
+    }
+
+    void textChatMsgRequestHandler(ISFSObject dt)
+    {
+        int id = dt.GetInt("id");
+        string msg = dt.GetUtfString("msg");
+        TextChatManger.instance.addMsgToView(smartFox.UserManager.GetUserById(id).Name +"/n"+msg);
 
     }
 
@@ -321,16 +397,20 @@ public class NetworkManager : MonoBehaviour
         if (userId == smartFox.MySelf.Id)
         {
             PlayerManager.Instance.SpawnPlayer(ntransform, name);
+            sendLoadTxtChatReq();
         }
         else
         {
             PlayerManager.Instance.SpawnEnemy(userId, ntransform, name);
         }
 
-        if(SceneManager.GetActiveScene().name==SceneNames.LiveEventsScene)
+        if(SceneManager.GetActiveScene().name==SceneNames.LiveEventsScene || SceneManager.GetActiveScene().name == SceneNames.StreamEventsScene )
         {
             smartToAgoraID.Add(userId,uint.MaxValue);
-            VoiceChatManager.Instance.SendAgoraID();
+            if (SceneManager.GetActiveScene().name == SceneNames.LiveEventsScene)
+                VoiceChatManager.Instance.SendAgoraID();
+            else
+                StreamConnection.instance.SendAgoraInfo();
         }
     }
 

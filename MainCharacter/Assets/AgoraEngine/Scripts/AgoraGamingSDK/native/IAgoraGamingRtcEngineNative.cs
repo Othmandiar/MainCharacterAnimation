@@ -96,6 +96,11 @@ namespace agora_gaming_rtc
         
         protected delegate void EngineEventOnStreamMessageHandler(uint userId, int streamId, IntPtr data, int length);
 
+        protected delegate void EngineEventOnRequestAudioFileInfo(string filePath, int durationMs, int error);
+
+        protected delegate void EngineEventOnRecorderStateChanged(int state, int error);
+
+        protected delegate void EngineEventOnRecorderInfoUpdated(string fileName, uint durationMs, uint fileSize);
 #region DllImport
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR
 		public const string MyLibName = "agoraSdkCWrapper";
@@ -331,6 +336,9 @@ namespace agora_gaming_rtc
         protected static extern int startEchoTest2(int intervalInSeconds);
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int startEchoTest3(IntPtr view, bool enableAudio, bool enableVideo, string token, string channelId);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
         protected static extern int stopEchoTest();
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
@@ -468,7 +476,29 @@ namespace agora_gaming_rtc
         protected static extern IntPtr getErrorDescription(int code);
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
-        protected static extern int setLiveTranscoding(int width, int height, int videoBitrate, int videoFramerate, bool lowLatency, int videoGroup, int video_codec_profile, uint backgroundColor, uint userCount, string transcodingUserInfo, string transcodingExtraInfo, string metaData, string watermarkRtcImageUrl, int watermarkRtcImageX, int watermarkRtcImageY, int watermarkRtcImageWidth, int watermarkRtcImageHeight, string backgroundImageRtcImageUrl, int backgroundImageRtcImageX, int backgroundImageRtcImageY, int backgroundImageRtcImageWidth, int backgroundImageRtcImageHeight, int audioSampleRate, int audioBitrate, int audioChannels, int audioCodecProfile, string advancedFeatures, uint advancedFeatureCount);
+        protected static extern int setLiveTranscoding(int width, int height, int videoBitrate, int videoFramerate, bool lowLatency, int videoGroup, int video_codec_profile, uint backgroundColor, uint userCount, string transcodingUserInfo, string transcodingExtraInfo, string metaData, string watermarkRtcImageUrl, int watermarkRtcImageX, int watermarkRtcImageY, int watermarkRtcImageWidth, int watermarkRtcImageHeight, int watermarkImageZorder, double watermarkImageAlpha, uint watermarkCount, string backgroundImageRtcImageUrl, int backgroundImageRtcImageX, int backgroundImageRtcImageY, int backgroundImageRtcImageWidth, int backgroundImageRtcImageHeight, int backgroundImageRtcImageZorder, double backgroundImageRtcImageAlpha, uint backgroundImageRtcImageCount, int audioSampleRate, int audioBitrate, int audioChannels, int audioCodecProfile, string advancedFeatures, uint advancedFeatureCount);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int setAVSyncSource(string channelId, uint uid);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int startRtmpStreamWithoutTranscoding(string url);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int startRtmpStreamWithTranscoding(string url, int width, int height, int videoBitrate, int videoFramerate, bool lowLatency, int videoGroup, int video_codec_profile, uint backgroundColor, uint userCount, string transcodingUserInfo, string transcodingExtraInfo, string metaData, string watermarkRtcImageUrl, int watermarkRtcImageX, int watermarkRtcImageY, int watermarkRtcImageWidth, int watermarkRtcImageHeight, int watermarkImageZorder, double watermarkImageAlpha, uint watermarkCount, string backgroundImageRtcImageUrl, int backgroundImageRtcImageX, int backgroundImageRtcImageY, int backgroundImageRtcImageWidth, int backgroundImageRtcImageHeight, int backgroundImageRtcImageZorder, double backgroundImageRtcImageAlpha, uint backgroundImageRtcImageCount, int audioSampleRate, int audioBitrate, int audioChannels, int audioCodecProfile, string advancedFeatures, uint advancedFeatureCount);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int updateRtmpTranscoding(int width, int height, int videoBitrate, int videoFramerate, bool lowLatency, int videoGroup, int video_codec_profile, uint backgroundColor, uint userCount, string transcodingUserInfo, string transcodingExtraInfo, string metaData, string watermarkRtcImageUrl, int watermarkRtcImageX, int watermarkRtcImageY, int watermarkRtcImageWidth, int watermarkRtcImageHeight, int watermarkImageZorder, double watermarkImageAlpha, uint watermarkCount, string backgroundImageRtcImageUrl, int backgroundImageRtcImageX, int backgroundImageRtcImageY, int backgroundImageRtcImageWidth, int backgroundImageRtcImageHeight, int backgroundImageRtcImageZorder, double backgroundImageRtcImageAlpha, uint backgroundImageRtcImageCount, int audioSampleRate, int audioBitrate, int audioChannels, int audioCodecProfile, string advancedFeatures, uint advancedFeatureCount);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int stopRtmpStream(string url);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int takeSnapshot(string channel, uint uid, string filePath);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int enableContentInspect(bool enabled, string extraInfo, string modulesInfo, int moduleCount);
+
         // video manager
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
         protected static extern bool createAVideoDeviceManager();
@@ -510,6 +540,9 @@ namespace agora_gaming_rtc
         protected static extern int setAudioRecordingDevice(string deviceId);
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int getAudioRecordingDefaultDevice(IntPtr deviceName,IntPtr deviceId);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
         protected static extern int setAudioRecordingDeviceVolume(int volume);
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
@@ -523,6 +556,9 @@ namespace agora_gaming_rtc
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
         protected static extern int getCurrentRecordingDeviceInfo(IntPtr deviceName, IntPtr deviceId);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int followSystemRecordingDevice(bool enable);
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
         protected static extern int getCurrentRecordingDevice(IntPtr deviceId);
@@ -550,6 +586,9 @@ namespace agora_gaming_rtc
         protected static extern int setAudioPlaybackDevice(string deviceId);
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int getAudioPlaybackDefaultDevice(IntPtr deviceName, IntPtr deviceId);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
         protected static extern int setAudioPlaybackDeviceVolume(int volume);
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
@@ -571,10 +610,16 @@ namespace agora_gaming_rtc
         protected static extern int getCurrentPlaybackDeviceInfo(IntPtr deviceName, IntPtr deviceId);
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int followSystemPlaybackDevice(bool enable);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
         protected static extern int getCurrentPlaybackDevice(IntPtr deviceId);
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
         protected static extern int pushVideoFrame(int type, int format, byte[] videoBuffer, int stride, int height, int cropLeft, int cropTop, int cropRight, int cropBottom, int rotation, long timestamp);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int pushVideoFrame2(int type, int format, IntPtr bufferPtr, int stride, int height, int cropLeft, int cropTop, int cropRight, int cropBottom, int rotation, long timestamp);
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
         protected static extern int setExternalVideoSource(bool enable, bool useTexture);
@@ -584,6 +629,9 @@ namespace agora_gaming_rtc
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
         protected static extern int pushAudioFrame_(int audioFrameType, int samples, int bytesPerSample, int channels, int samplesPerSec, byte[] buffer, long renderTimeMs, int avsync_type);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int pushAudioFrame3_(int sourcePos, int audioFrameType, int samples, int bytesPerSample, int channels, int samplesPerSec, byte[] buffer, long renderTimeMs, int avsync_type);
 
         // [DllImport(MyLibName, CharSet = CharSet.Ansi)]
         // protected static extern int pushAudioFrame2_(int mediaSourceType, int audioFrameType, int samples, int bytesPerSample, int channels, int samplesPerSec, byte[] buffer, long renderTimeMs, int avsync_type, bool wrap);
@@ -673,7 +721,7 @@ namespace agora_gaming_rtc
         protected static extern IntPtr getUserInfoByUid(uint uid);
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
-        protected static extern int setBeautyEffectOptions(bool enabled, int lighteningContrastLevel, float lighteningLevel, float smoothnessLevel, float rednessLevel);
+        protected static extern int setBeautyEffectOptions(bool enabled, int lighteningContrastLevel, float lighteningLevel, float smoothnessLevel, float rednessLevel, float sharpnessLevel);
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
         protected static extern int setInEarMonitoringVolume(int volume);
@@ -849,7 +897,13 @@ namespace agora_gaming_rtc
                                       OnFirstLocalVideoFramePublishedHandler onFirstLocalVideoFramePublished,
                                       OnUserSuperResolutionEnabledHandler onUserSuperResolutionEnabled,
                                       OnUploadLogResultHandler onUploadLogResult,
-                                      OnVirtualBackgroundSourceEnabledHandler onVirtualBackgroundSourceEnabled);
+                                      OnVirtualBackgroundSourceEnabledHandler onVirtualBackgroundSourceEnabled,
+                                      EngineEventOnRequestAudioFileInfo OnRequestAudioFileInfo,
+                                      OnContentInspectResultHandler onContentInspectResult,
+                                      OnSnapshotTakenHandler onSnapshotTaken,
+                                      OnClientRoleChangeFailedHandler onClientRoleChangeFailed,
+                                      OnAudioDeviceTestVolumeIndicationHandler onAudioDeviceTestVolumeIndication,
+                                      OnScreenCaptureInfoUpdatedHandler onScreenCaptureInfoUpdated);
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
         protected static extern void initChannelEventCallback(IntPtr channel, ChannelOnWarningHandler onWarning,
@@ -886,7 +940,9 @@ namespace agora_gaming_rtc
                                         ChannelOnVideoPublishStateChangedHandler onVideoPublishStateChange,
                                         ChannelOnAudioSubscribeStateChangedHandler onAudioSubscribeStateChange,
                                         ChannelOnVideoSubscribeStateChangedHandler onVideoSubscribeStateChange,
-                                        ChannelOnUserSuperResolutionEnabledHandler onUserSuperResolutionEnabled);
+                                        ChannelOnUserSuperResolutionEnabledHandler onUserSuperResolutionEnabled,
+                                        ChannelOnClientRoleChangeFailedHandler onClientRoleChangeFailed,
+                                        ChannelOnFirstRemoteVideoFrameHandler onFirstRemoteVideoFrame);
 
         // audio and video raw data
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
@@ -1012,7 +1068,19 @@ namespace agora_gaming_rtc
         protected static extern int removePublishStreamUrl2(IntPtr channel, string url);
         
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
-        protected static extern int setLiveTranscoding2(IntPtr channel, int width, int height, int videoBitrate, int videoFramerate, bool lowLatency, int videoGroup, int video_codec_profile, uint backgroundColor, uint userCount, string transcodingUserInfo, string transcodingExtraInfo, string metaData, string watermarkRtcImageUrl, int watermarkRtcImageX, int watermarkRtcImageY, int watermarkRtcImageWidth, int watermarkRtcImageHeight, string backgroundImageRtcImageUrl, int backgroundImageRtcImageX, int backgroundImageRtcImageY, int backgroundImageRtcImageWidth, int backgroundImageRtcImageHeight, int audioSampleRate, int audioBitrate, int audioChannels, int audioCodecProfile, string advancedFeatures, uint advancedFeatureCount);
+        protected static extern int setLiveTranscoding2(IntPtr channel, int width, int height, int videoBitrate, int videoFramerate, bool lowLatency, int videoGroup, int video_codec_profile, uint backgroundColor, uint userCount, string transcodingUserInfo, string transcodingExtraInfo, string metaData, string watermarkRtcImageUrl, int watermarkRtcImageX, int watermarkRtcImageY, int watermarkRtcImageWidth, int watermarkRtcImageHeight, int watermarkImageZorder, double watermarkImageAlpha, uint watermarkCount, string backgroundImageRtcImageUrl, int backgroundImageRtcImageX, int backgroundImageRtcImageY, int backgroundImageRtcImageWidth, int backgroundImageRtcImageHeight, int backgroundImageRtcImageZorder, double backgroundImageRtcImageAlpha, uint backgroundImageRtcImageCount, int audioSampleRate, int audioBitrate, int audioChannels, int audioCodecProfile, string advancedFeatures, uint advancedFeatureCount);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int startRtmpStreamWithoutTranscoding2(IntPtr channel, string url);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int startRtmpStreamWithTranscoding2(IntPtr channel, string url, int width, int height, int videoBitrate, int videoFramerate, bool lowLatency, int videoGroup, int video_codec_profile, uint backgroundColor, uint userCount, string transcodingUserInfo, string transcodingExtraInfo, string metaData, string watermarkRtcImageUrl, int watermarkRtcImageX, int watermarkRtcImageY, int watermarkRtcImageWidth, int watermarkRtcImageHeight, int watermarkImageZorder, double watermarkImageAlpha, uint watermarkCount, string backgroundImageRtcImageUrl, int backgroundImageRtcImageX, int backgroundImageRtcImageY, int backgroundImageRtcImageWidth, int backgroundImageRtcImageHeight, int backgroundImageRtcImageZorder, double backgroundImageRtcImageAlpha, uint backgroundImageRtcImageCount, int audioSampleRate, int audioBitrate, int audioChannels, int audioCodecProfile, string advancedFeatures, uint advancedFeatureCount);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int updateRtmpTranscoding2(IntPtr channel, int width, int height, int videoBitrate, int videoFramerate, bool lowLatency, int videoGroup, int video_codec_profile, uint backgroundColor, uint userCount, string transcodingUserInfo, string transcodingExtraInfo, string metaData, string watermarkRtcImageUrl, int watermarkRtcImageX, int watermarkRtcImageY, int watermarkRtcImageWidth, int watermarkRtcImageHeight, int watermarkImageZorder, double watermarkImageAlpha, uint watermarkCount, string backgroundImageRtcImageUrl, int backgroundImageRtcImageX, int backgroundImageRtcImageY, int backgroundImageRtcImageWidth, int backgroundImageRtcImageHeight, int backgroundImageRtcImageZorder, double backgroundImageRtcImageAlpha, uint backgroundImageRtcImageCount, int audioSampleRate, int audioBitrate, int audioChannels, int audioCodecProfile, string advancedFeatures, uint advancedFeatureCount);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int stopRtmpStream2(IntPtr channel, string url);
        
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
         protected static extern int addInjectStreamUrl2(IntPtr channel, string url, int width, int height, int videoGop, int videoFramerate, int videoBitrate, int audioSampleRate, int audioBitrate, int audioChannels);
@@ -1102,7 +1170,7 @@ namespace agora_gaming_rtc
         protected static extern int startAudioRecordingWithConfig(string filePath, int recordingQuality, int recordingPosition, int recordingSampleRate); 
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
-        protected static extern int setLocalAccessPoint(string ips, int ipSize, string domain); 
+        protected static extern int setLocalAccessPoint(string ips, int ipSize, string domainList, int domainListSize, string verifyDomainName, int mode); 
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
         protected static extern int muteLocalAudioStream_channel(IntPtr channel, bool mute);
@@ -1111,13 +1179,95 @@ namespace agora_gaming_rtc
         protected static extern int muteLocalVideoStream_channel(IntPtr channel, bool mute);
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
-        protected static extern int enableVirtualBackground(bool enabled, int background_source_type, uint color, string source);
+        protected static extern int enableVirtualBackground(bool enabled, int background_source_type, uint color, string source, int blur_degree);
 
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
         protected static extern int setCameraTorchOn(bool on);
         
         [DllImport(MyLibName, CharSet = CharSet.Ansi)]
         protected static extern bool isCameraTorchSupported();
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int setExternalAudioSourceVolume(int sourcePos, int volume);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int setAudioMixingPlaybackSpeed(int speed);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int selectAudioTrack(int index);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int getAudioTrackCount();
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int setAudioMixingDualMonoMode(int mode);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int pauseAllChannelMediaRelay();
+        
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int resumeAllChannelMediaRelay();
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int getAudioFileInfo(string filePath);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int setAVSyncSource2(IntPtr channel, string channelId, uint uid);
+
+        //MediaRecorder
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int createMediaRecorder();
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int startRecording(string storagePath, int containerFormat, int streamType, int maxDurationMs, int recorderInfoUpdateInterval);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int stopRecording();
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int releaseMediaRecorder();
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern void initEventOnMediaRecorderCallback(EngineEventOnRecorderStateChanged onRecorderStateChanged, EngineEventOnRecorderInfoUpdated onRecorderInfoUpdated);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern void getScreenCaptureSources(int thumbHeight, int thumbWidth, int iconHeight, int iconWidth, bool includeScreen);
+        
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int getScreenCaptureSourcesCount();
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int getScreenCaptureSourceType(uint index);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern IntPtr getScreenCaptureSourceName(uint index);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern IntPtr getScreenCaptureSourceProcessPath(uint index);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern IntPtr getScreenCaptureSourceTitle(uint index);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern IntPtr getScreenCaptureSourceId(uint index);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern bool getScreenCaptureIsPrimaryMonitor(uint index);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int getScreenCaptureThumbImage(uint index, ref ThumbImageBuffer buffer);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+		protected static extern int getScreenCaptureIconImage(uint index, ref ThumbImageBuffer buffer);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int setLowlightEnhanceOptions(bool enabled, int mode, int level);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int setVideoDenoiserOptions(bool enabled, int mode, int level);
+
+        [DllImport(MyLibName, CharSet = CharSet.Ansi)]
+        protected static extern int setColorEnhanceOptions(bool enabled, float strengthLevel, float skinProtectLevel);
         #endregion engine callbacks
     }
 }

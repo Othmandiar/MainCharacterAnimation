@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace agora_gaming_rtc {
         public sealed class AgoraCallbackQueue : MonoBehaviour
@@ -47,13 +48,19 @@ namespace agora_gaming_rtc {
             // Update is called once per frame
             void Update()
             {
-                var action = DeQueue();
-
-                if (action != null)
+                while(true)
                 {
-                    action();
+                    var action = DeQueue();
+                    if (action != null)
+                    {
+                        action.Invoke();
+                        Thread.Sleep(10);
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
-                action = null;
             }
 
             void OnDestroy()

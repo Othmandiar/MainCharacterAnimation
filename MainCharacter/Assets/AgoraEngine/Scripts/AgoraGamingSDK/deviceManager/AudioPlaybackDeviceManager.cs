@@ -15,6 +15,8 @@ namespace agora_gaming_rtc
         public abstract int GetAudioPlaybackDevice(int index, ref string deviceName, ref string deviceId);
         
         public abstract int SetAudioPlaybackDevice(string deviceId);
+
+        public abstract int GetAudioPlaybackDefaultDevice(ref string deviceName, ref string deviceId);
            
         public abstract int SetAudioPlaybackDeviceVolume(int volume);
         
@@ -31,6 +33,8 @@ namespace agora_gaming_rtc
         public abstract int GetCurrentPlaybackDevice(ref string deviceId);
         
         public abstract int GetCurrentPlaybackDeviceInfo(ref string deviceName, ref string deviceId);
+
+        public abstract int FollowSystemPlaybackDevice(bool enable);
     }
 
     /** The definition of AudioPlaybackDeviceManager. */
@@ -142,6 +146,22 @@ namespace agora_gaming_rtc
             {
                 return (int)ERROR_CODE.ERROR_INVALID_ARGUMENT;
             }
+        }
+
+        public override int GetAudioPlaybackDefaultDevice(ref string deviceName, ref string deviceId)
+        {
+            if (mEngine == null)
+                return (int)ERROR_CODE.ERROR_NOT_INIT_ENGINE;
+
+
+            System.IntPtr playbackDeviceName = Marshal.AllocHGlobal(512);
+            System.IntPtr playbackDeviceId = Marshal.AllocHGlobal(512);
+            int ret = IRtcEngineNative.getAudioPlaybackDefaultDevice(playbackDeviceName, playbackDeviceId);
+            deviceName = Marshal.PtrToStringAnsi(playbackDeviceName);
+            deviceId = Marshal.PtrToStringAnsi(playbackDeviceId);
+            Marshal.FreeHGlobal(playbackDeviceName);
+            Marshal.FreeHGlobal(playbackDeviceId);
+            return ret;
         }
 
         /** Retrieves the device ID of the current audio playback device.
@@ -322,6 +342,22 @@ namespace agora_gaming_rtc
                 deviceId = Marshal.PtrToStringAnsi(playbackDeviceId);
                 Marshal.FreeHGlobal(playbackDeviceName);
                 Marshal.FreeHGlobal(playbackDeviceId);
+                return ret;
+            }
+            else 
+            {
+                return (int)ERROR_CODE.ERROR_NO_DEVICE_PLUGIN;
+            }
+        }
+
+        public override int FollowSystemPlaybackDevice(bool enable)
+        {
+            if (mEngine == null)
+                return (int)ERROR_CODE.ERROR_NOT_INIT_ENGINE;
+
+            if (GetAudioPlaybackDeviceCount() > 0)
+            {
+                int ret = IRtcEngineNative.followSystemPlaybackDevice(enable);
                 return ret;
             }
             else 

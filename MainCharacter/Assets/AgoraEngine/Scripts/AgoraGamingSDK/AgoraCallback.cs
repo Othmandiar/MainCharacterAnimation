@@ -726,7 +726,7 @@ namespace agora_gaming_rtc
          * @param state The RTMP or RTMPS streaming state. See: #RTMP_STREAM_PUBLISH_STATE.
          * @param errCode The detailed error information for streaming. See: #RTMP_STREAM_PUBLISH_ERROR.
          */
-        public delegate void OnRtmpStreamingStateChangedHandler(string url, RTMP_STREAM_PUBLISH_STATE state, RTMP_STREAM_PUBLISH_ERROR errCode);
+        public delegate void OnRtmpStreamingStateChangedHandler(string url, RTMP_STREAM_PUBLISH_STATE state, RTMP_STREAM_PUBLISH_ERROR_TYPE errCode);
 
         /** Occurs when the local network type changes.
          * 
@@ -963,4 +963,33 @@ namespace agora_gaming_rtc
         /// @endcond
 
         public delegate void OnVirtualBackgroundSourceEnabledHandler(bool enabled, VIRTUAL_BACKGROUND_SOURCE_STATE_REASON reason);
+
+        public delegate void OnRequestAudioFileInfoHandler(AudioFileInfo info, AUDIO_FILE_INFO_ERROR error);
+
+        /*
+        * @since v3.5.2
+        * Reports result of Content Inspect
+        */
+        public delegate void OnContentInspectResultHandler(CONTENT_INSPECT_RESULT result);
+
+        /** Occurs when takeSnapshot API result is obtained
+        *
+        * @since v3.5.2
+        *
+        * @brief snapshot taken callback
+        *
+        * @param channel channel name
+        * @param uid user id
+        * @param filePath image is saveed file path
+        * @param width image width
+        * @param height image height
+        * @param errCode 0 is ok negative is error
+        */
+        public delegate void OnSnapshotTakenHandler(string channel, uint uid, string filePath, int width, int height, int errCode);
+
+        public delegate void OnClientRoleChangeFailedHandler(CLIENT_ROLE_CHANGE_FAILED_REASON reason, CLIENT_ROLE_TYPE currentRole);
+
+        public delegate void OnAudioDeviceTestVolumeIndicationHandler(AudioDeviceTestVolumeType volumeType, int volume);
+
+        public delegate void OnScreenCaptureInfoUpdatedHandler(ScreenCaptureInfo info);
 }

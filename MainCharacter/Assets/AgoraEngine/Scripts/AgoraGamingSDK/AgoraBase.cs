@@ -1,5 +1,6 @@
 
 using System;
+using System.Runtime.InteropServices;
 
 namespace agora_gaming_rtc
 {
@@ -279,6 +280,10 @@ namespace agora_gaming_rtc
         CONNECTION_CHANGED_CLIENT_IP_ADDRESS_CHANGED = 13,
         /** 14: Timeout for the keep-alive of the connection between the SDK and Agora's edge server. The connection state changes to `CONNECTION_STATE_RECONNECTING(4)`. */
         CONNECTION_CHANGED_KEEP_ALIVE_TIMEOUT = 14,
+        /** 19: The connection failed due to same uid joined again on another device. */
+        CONNECTION_CHANGED_SAME_UID_LOGIN = 19,
+        /** 20: The connection failed due to too many broadcasters in the channel. */
+        CONNECTION_CHANGED_TOO_MANY_BROADCASTERS = 20,
     };
 
     /** Stream fallback options. */
@@ -400,6 +405,12 @@ namespace agora_gaming_rtc
         LOCAL_VIDEO_STREAM_ERROR_CAPTURE_MULTIPLE_FOREGROUND_APPS = 7,
         /** 8:capture not found*/
         LOCAL_VIDEO_STREAM_ERROR_DEVICE_NOT_FOUND = 8,
+        /**
+        * 10: The SDK cannot find the device id in device list, the device id is invalid.
+        *
+        * @since v3.5
+        */
+        LOCAL_VIDEO_STREAM_ERROR_DEVICE_INVALID_ID = 10,
 
         LOCAL_VIDEO_STREAM_ERROR_SCREEN_CAPTURE_WINDOW_MINIMIZED = 11,
         /** 12: The error code indicates that a window shared by the window ID has been closed, or a full-screen window
@@ -415,6 +426,8 @@ namespace agora_gaming_rtc
         * the web video or document. After the user exits full-screen mode, the SDK reports this error code.
         */
         LOCAL_VIDEO_STREAM_ERROR_SCREEN_CAPTURE_WINDOW_CLOSED = 12,
+
+        LOCAL_VIDEO_STREAM_ERROR_SCREEN_CAPTURE_WINDOW_OCCLUDED = 13,
 
         LOCAL_VIDEO_STREAM_ERROR_SCREEN_CAPTURE_WINDOW_NOT_SUPPORTED = 20,
     };
@@ -596,11 +609,14 @@ namespace agora_gaming_rtc
         /** 4: The RTMP or RTMPS streaming fails. See the errCode parameter for the detailed error information. You can also call the {@link agora_gaming_rtc.IRtcEngine.AddPublishStreamUrl AddPublishStreamUrl} method to publish the RTMP or RTMPS streaming again.
         */
         RTMP_STREAM_PUBLISH_STATE_FAILURE = 4,
+        /** The SDK is disconnecting to Agora's streaming server and the CDN server. This state is triggered after you call the \ref IRtcEngine::removePublishStreamUrl "removePublishStreamUrl" method.
+        */
+        RTMP_STREAM_PUBLISH_STATE_DISCONNECTING = 5,
     };
 
     /** Error codes of the RTMP or RTMPS streaming.
     */
-    public enum RTMP_STREAM_PUBLISH_ERROR
+    public enum RTMP_STREAM_PUBLISH_ERROR_TYPE
     {
         /** The RTMP or RTMPS streaming publishes successfully. */
         RTMP_STREAM_PUBLISH_ERROR_OK = 0,
@@ -624,6 +640,14 @@ namespace agora_gaming_rtc
         RTMP_STREAM_PUBLISH_ERROR_STREAM_NOT_FOUND = 9,
         /** The format of the RTMP or RTMPS streaming URL is not supported. Check whether the URL format is correct. */
         RTMP_STREAM_PUBLISH_ERROR_FORMAT_NOT_SUPPORTED = 10,
+        /** Current role is not broadcaster. Check whether the role of the current channel. */
+        RTMP_STREAM_PUBLISH_ERROR_NOT_BROADCASTER = 11,  // Note: match to ERR_PUBLISH_STREAM_NOT_BROADCASTER in AgoraBase.h
+        /** Call updateTranscoding, but no mix stream. */
+        RTMP_STREAM_PUBLISH_ERROR_TRANSCODING_NO_MIX_STREAM = 13,  // Note: match to ERR_PUBLISH_STREAM_TRANSCODING_NO_MIX_STREAM in AgoraBase.h
+        /** Network error. */
+        RTMP_STREAM_PUBLISH_ERROR_NET_DOWN = 14,  // Note: match to ERR_NET_DOWN in AgoraBase.h
+        /** User AppId have not authorized to push stream. */
+        RTMP_STREAM_PUBLISH_ERROR_INVALID_APPID = 15,  // Note: match to ERR_PUBLISH_STREAM_APPID_INVALID in AgoraBase.h
         /** The RTMP streaming unpublishes successfully. */
         RTMP_STREAM_UNPUBLISH_ERROR_OK = 100,
     };
@@ -645,6 +669,7 @@ namespace agora_gaming_rtc
         NETWORK_TYPE_MOBILE_3G = 4,
         /** 5: The network type is mobile 4G. */
         NETWORK_TYPE_MOBILE_4G = 5,
+        NETWORK_TYPE_MOBILE_5G = 6,
     };
 
     /** Local voice beautifier options.
@@ -868,6 +893,8 @@ namespace agora_gaming_rtc
         AUDIO_CODEC_PROFILE_LC_AAC = 0,
         /** 1: HE-AAC, which is the high-efficiency audio codec type. */
         AUDIO_CODEC_PROFILE_HE_AAC = 1,
+        /** 2: HE-AACv2, which is the high-efficiency audio codec type. */
+        AUDIO_CODEC_PROFILE_HE_AAC_V2 = 2,
     };
 
     /** Video codec types */
@@ -1138,7 +1165,7 @@ namespace agora_gaming_rtc
     };
 
     /** The channel media options. */
-    public struct ChannelMediaOptions
+    public class ChannelMediaOptions
     {
         public ChannelMediaOptions(bool _autoSubscribeAudio = true, bool _autoSubscribeVideo = false, bool _publishLocalAudio = true, bool _publishLocalVideo = true) {
             autoSubscribeAudio = _autoSubscribeAudio;
@@ -1497,6 +1524,20 @@ namespace agora_gaming_rtc
         public int width;
         /** Height of the image on the broadcasting video. */
         public int height;
+        /** The layer index of the image. An integer. The value range is [0, 255].
+        - 0: (Default) Bottom layer.
+        - 255: Top layer.
+
+        @note
+        - If zOrder is beyond this range, the SDK reports #ERR_INVALID_ARGUMENT.
+        */
+        public int zOrder;
+        /** The transparency level of the image. The value ranges between 0 and 1.0:
+
+        - 0: Completely transparent
+        - 1.0: (Default) Opaque
+        */
+        public double alpha;
     }
 
     /// @cond
@@ -1583,11 +1624,27 @@ namespace agora_gaming_rtc
          * Ensure that the format of the image is PNG. Once a watermark image is added, the audience of the CDN live publishing stream can see the watermark image. See RtcImage.
          */
         public RtcImage watermark;
+        /**
+        * The variables means the count of watermark.
+        * if watermark is array, watermarkCount is count of watermark.
+        * if watermark is just a pointer, watermarkCount pointer to object address. At the same time, watermarkCount must be 0 or 1.
+        * default value: 0, compatible with old user-api
+        * The value range is [0, 100].
+        */
+        public uint watermarkCount;
         /** The background image added to the CDN live publishing stream.
          * 
          * Once a background image is added, the audience of the CDN live publishing stream can see the background image. See RtcImage.
          */
         public RtcImage backgroundImage;
+        /**
+        * The variables means the count of backgroundImage.
+        * if backgroundImage is array, backgroundImageCount is count of backgroundImage.
+        * if backgroundImage is just a pointer, backgroundImageCount pointer to object address. At the same time, backgroundImageCount must be 0 or 1.
+        * default value: 0, compatible with old user-api
+        * The value range is [0, 100].
+        */
+        public uint backgroundImageCount;
         /** Self-defined audio-sample rate: #AUDIO_SAMPLE_RATE_TYPE.
         */
         public AUDIO_SAMPLE_RATE_TYPE audioSampleRate;
@@ -1720,6 +1777,8 @@ namespace agora_gaming_rtc
         /** The video buffer.
          */
         public byte[] buffer;
+
+        public IntPtr bufferPtr;
         /** Line spacing of the incoming video frame, which must be in pixels instead of bytes. For textures, it is the width of the texture.
          */
         public int stride;
@@ -2103,7 +2162,21 @@ namespace agora_gaming_rtc
         LOCAL_AUDIO_STREAM_ERROR_NO_RECORDING_DEVICE = 6,
         /** 7: No playout audio device.
         */
-        LOCAL_AUDIO_STREAM_ERROR_NO_PLAYOUT_DEVICE = 7
+        LOCAL_AUDIO_STREAM_ERROR_NO_PLAYOUT_DEVICE = 7,
+        /**
+        * 8: The local audio capturing is interrupted by the system call.
+        */
+        LOCAL_AUDIO_STREAM_ERROR_INTERRUPTED = 8,
+        /** 9: An invalid audio capture device ID.
+        *
+        * @since v3.5.1
+        */
+        LOCAL_AUDIO_STREAM_ERROR_RECORD_INVALID_ID = 9,
+        /** 10: An invalid audio playback device ID.
+        *
+        * @since v3.5.1
+        */
+        LOCAL_AUDIO_STREAM_ERROR_PLAYOUT_INVALID_ID = 10,
     };
 
 
@@ -2198,6 +2271,9 @@ namespace agora_gaming_rtc
         /** The redness level. The value ranges between 0 (original) and 1. This parameter adjusts the red saturation level.
         */
         public float rednessLevel;
+        /** The sharpness level. The value ranges between 0 (original) and 1. This parameter is used to improve the sharpness level/clarity of the pic.
+        */
+        public float sharpnessLevel;
     }
 
     /** The relative location of the region to the screen or window. */
@@ -2245,6 +2321,20 @@ namespace agora_gaming_rtc
          * - false: Do not capture the mouse.
          */
         public bool captureMouseCursor;
+        /** Whether to bring the window to the front when calling \ref IRtcEngine::startScreenCaptureByWindowId "startScreenCaptureByWindowId" to share the window:
+        * - true: Bring the window to the front.
+        * - false: (Default) Do not bring the window to the front.
+        */
+        public bool windowFocus;
+        /** A list of IDs of windows to be blocked.
+        *
+        * When calling \ref IRtcEngine::startScreenCaptureByScreenRect "startScreenCaptureByScreenRect" to start screen sharing, you can use this parameter to block the specified windows.
+        * When calling \ref IRtcEngine::updateScreenCaptureParameters "updateScreenCaptureParameters" to update the configuration for screen sharing, you can use this parameter to dynamically block the specified windows during screen sharing.
+        */
+        public string[] excludeWindowList;
+        /** The number of windows to be blocked.
+        */
+        public int excludeWindowCount;
     };
 
     /** Configuration of the injected media stream.
@@ -2387,6 +2477,26 @@ namespace agora_gaming_rtc
         /** 11: The video profile is sent to the server.
         */
         RELAY_EVENT_VIDEO_PROFILE_UPDATE = 11,
+        /** 12: The SDK successfully pauses relaying the media stream to destination channels.
+        *
+        * @since v3.5.1
+        */
+        RELAY_EVENT_PAUSE_SEND_PACKET_TO_DEST_CHANNEL_SUCCESS = 12,
+        /** 13: The SDK fails to pause relaying the media stream to destination channels.
+        *
+        * @since v3.5.1
+        */
+        RELAY_EVENT_PAUSE_SEND_PACKET_TO_DEST_CHANNEL_FAILED = 13,
+        /** 14: The SDK successfully resumes relaying the media stream to destination channels.
+        *
+        * @since v3.5.1
+        */
+        RELAY_EVENT_RESUME_SEND_PACKET_TO_DEST_CHANNEL_SUCCESS = 14,
+        /** 15: The SDK fails to resume relaying the media stream to destination channels.
+        *
+        * @since v3.5.1
+        */
+        RELAY_EVENT_RESUME_SEND_PACKET_TO_DEST_CHANNEL_FAILED = 15,
     };
 
     /** The state code in CHANNEL_MEDIA_RELAY_STATE. */
@@ -2759,7 +2869,13 @@ namespace agora_gaming_rtc
         RTMP_STREAMING_EVENT_FAILED_LOAD_IMAGE = 1,
         /** The chosen URL address is already in use for CDN live streaming.
         */
-        RTMP_STREAMING_EVENT_URL_ALREADY_IN_USE = 2  
+        RTMP_STREAMING_EVENT_URL_ALREADY_IN_USE = 2,
+        /** advanced feature not support
+        */
+        RTMP_STREAMING_EVENT_ADVANCED_FEATURE_NOT_SUPPORT = 3,
+        /** Client request too frequently.
+        */
+        RTMP_STREAMING_EVENT_REQUEST_TOO_OFTEN = 4,
     };
 
     /** The publishing state.
@@ -3213,7 +3329,37 @@ namespace agora_gaming_rtc
         BACKGROUND_COLOR = 1,
         /** Background source is image path, only support png and jpg format*/
         BACKGROUND_IMG,
+        /**
+        * The background image is blurred.
+        *
+        * @since v3.5.1
+        */
+        BACKGROUND_BLUR
     };
+
+    /**
+    * The degree of blurring applied to the custom background image.
+    *
+    * @since v3.5.1
+    */
+    public enum BACKGROUND_BLUR_DEGREE {
+        /**
+        * 1: The degree of blurring applied to the custom background image is low.
+        * The user can almost see the background clearly.
+        */
+        BLUR_DEGREE_LOW = 1,
+        /**
+        * The degree of blurring applied to the custom background image is medium.
+        * It is difficult for the user to recognize details in the background.
+        */
+        BLUR_DEGREE_MEDIUM,
+        /**
+        * (Default) The degree of blurring applied to the custom background image is high.
+        * The user can barely see any distinguishing features in the background.
+        */
+        BLUR_DEGREE_HIGH,
+    };
+
 
     public struct VirtualBackgroundSource {
         /** The source type used to substitude capture image background.
@@ -3226,6 +3372,8 @@ namespace agora_gaming_rtc
 
         /** image file path */
         public string source;
+
+        public BACKGROUND_BLUR_DEGREE  blur_degree;
     };
 
     public enum VIRTUAL_BACKGROUND_SOURCE_STATE_REASON {
@@ -3237,5 +3385,490 @@ namespace agora_gaming_rtc
         // The device is not supported
         VIRTUAL_BACKGROUND_SOURCE_STATE_REASON_DEVICE_NOT_SUPPORTED = 3,
     };
+
+    /**
+    * The channel mode. Set in \ref agora::rtc::IRtcEngine::setAudioMixingDualMonoMode "setAudioMixingDualMonoMode".
+    *
+    * @since v3.5.1
+    */
+    public enum AUDIO_MIXING_DUAL_MONO_MODE {
+        /**
+        * 0: Original mode.
+        */
+        AUDIO_MIXING_DUAL_MONO_AUTO = 0,
+        /**
+        * 1: Left channel mode. This mode replaces the audio of the right channel
+        * with the audio of the left channel, which means the user can only hear
+        * the audio of the left channel.
+        */
+        AUDIO_MIXING_DUAL_MONO_L = 1,
+        /**
+        * 2: Right channel mode. This mode replaces the audio of the left channel with
+        * the audio of the right channel, which means the user can only hear the audio
+        * of the right channel.
+        */
+        AUDIO_MIXING_DUAL_MONO_R = 2,
+        /**
+        * 3: Mixed channel mode. This mode mixes the audio of the left channel and
+        * the right channel, which means the user can hear the audio of the left
+        * channel and the right channel at the same time.
+        */
+        AUDIO_MIXING_DUAL_MONO_MIX = 3
+    };
+
+    /**
+    * The information of an audio file. This struct is reported
+    * in \ref IRtcEngineEventHandler::onRequestAudioFileInfo "onRequestAudioFileInfo".
+    *
+    * @since v3.5.1
+    */
+    public struct AudioFileInfo {
+        /** The file path.
+        */
+        public string filePath;
+        /** The file duration (ms).
+        */
+        public int durationMs;
+    };
+
+    /** The information acquisition state. This enum is reported
+    * in \ref IRtcEngineEventHandler::onRequestAudioFileInfo "onRequestAudioFileInfo".
+    *
+    * @since v3.5.1
+    */
+    public enum AUDIO_FILE_INFO_ERROR {
+        /** 0: Successfully get the information of an audio file.
+        */
+        AUDIO_FILE_INFO_ERROR_OK = 0,
+
+        /** 1: Fail to get the information of an audio file.
+        */
+        AUDIO_FILE_INFO_ERROR_FAILURE = 1
+    };
+
+    /*
+    * @since v3.5.2
+    */
+    public enum CONTENT_INSPECT_RESULT {
+        CONTENT_INSPECT_NEUTRAL = 1,
+        CONTENT_INSPECT_SEXY = 2,
+        CONTENT_INSPECT_PORN = 3
+    };
+
+    /**
+    * The EchoTestConfiguration struct.
+    * @since v3.5.2
+    */
+    public struct EchoTestConfiguration {
+        public IntPtr view;
+        public bool enableAudio;
+        public bool enableVideo;
+        public string token;
+        public string channelId;
+    };
+
+    /** Definition of ContentInspectModule.
+    * @since v3.5.2
+    */
+    public struct ContentInspectModule {
+        /**
+        * The content inspect module type.
+        * the module type can be 0 to 31.
+        * kContentInspectInvalid(0)
+        * kContentInspectModeration(1)
+        * kContentInspectSupervise(2)
+        */
+        public int type;
+        /**The content inspect frequency, default is 0 second.
+        * the frequency <= 0 is invalid.
+        */
+        public int interval;
+    };
+
+    /** Definition of ContentInspectConfig.
+    * @since v3.5.2
+    */
+    public struct ContentInspectConfig {
+        /** The extra information, max length of extraInfo is 1024.
+        *  The extra information will send to server with content(image).
+        */
+        public string extraInfo;
+        /**The content inspect modules, max length of modules is 32.
+        * the content(snapshot of send video stream, image) can be used to max of 32 types functions.
+        */
+        public ContentInspectModule[] modules;
+        /**The content inspect module count.
+        */
+        public int moduleCount;
+    };
+
+    public enum AVDATA_TYPE {
+        /** 0: the metadata type is unknown.
+        */
+        AVDATA_UNKNOWN = 0,
+        /** 1: the metadata type is video.
+        */
+        AVDATA_VIDEO = 1,
+        /** 2: the metadata type is video.
+        */
+        AVDATA_AUDIO = 2
+    };
+
+    public enum CODEC_VIDEO {
+        /** 0: h264 avc codec.
+        */
+        CODEC_VIDEO_AVC = 0,
+        /** 1: h265 hevc codec.
+        */
+        CODEC_VIDEO_HEVC = 1,
+        /** 2: vp8 codec.
+        */
+        CODEC_VIDEO_VP8 = 2
+    };
+
+    public enum CODEC_AUDIO {
+        /** 0: PCM audio codec.
+        */
+        CODEC_AUDIO_PCM = 0,
+        /** 1: aac audio codec.
+        */
+        CODEC_AUDIO_AAC = 1,
+        /** 2: G711 audio codec.
+        */
+        CODEC_AUDIO_G722 = 2
+    };
+
+    public class VDataInfo {
+        public uint codec;
+        public uint width;
+        public uint height;
+        public int frameType;
+        public int rotation;
+        public bool equal(VDataInfo vinfo) { return codec == vinfo.codec && width == vinfo.width && height == vinfo.height && rotation == vinfo.rotation; }
+    };
+
+    public class ADataInfo {
+        public uint codec;
+        public uint bitwidth;
+        public uint sample_rate;
+        public uint channel;
+        public uint sample_size;
+
+        public bool equal(ADataInfo ainfo) { return codec == ainfo.codec && bitwidth == ainfo.bitwidth && sample_rate == ainfo.sample_rate && channel == ainfo.channel; }
+    };
+
+    public struct AVData {
+        /** The User ID. reserved
+        - For the receiver: the ID of the user who owns the data.
+        */
+        public uint uid;
+        /**
+        - data type, audio / video.
+        */
+        public AVDATA_TYPE type;
+        /** Buffer size of the sent or received Metadata.
+        */
+        public uint size;
+        /** Buffer address of the sent or received Metadata.
+        */
+        public byte[] buffer;
+        /** Time statmp of the frame following the metadata.
+        */
+        public uint timestamp;
+        /**
+        * Video frame info
+        */
+        public VDataInfo vinfo;
+        /**
+        * Audio frame info
+        */
+        public ADataInfo ainfo;
+    };
+
+    public enum MediaRecorderContainerFormat {
+        FORMAT_MP4 = 1,
+        FORMAT_FLV = 2
+    };
+
+    public enum MediaRecorderStreamType {
+        STREAM_TYPE_AUDIO = 0x01,
+        STREAM_TYPE_VIDEO = 0x02,
+        STREAM_TYPE_BOTH = STREAM_TYPE_AUDIO | STREAM_TYPE_VIDEO
+    };
+
+    public enum RecorderState {
+        RECORDER_STATE_ERROR = -1,
+        RECORDER_STATE_START = 2,
+        RECORDER_STATE_STOP = 3
+    };
+
+    public enum RecorderErrorCode {
+        RECORDER_ERROR_NONE = 0,
+        RECORDER_ERROR_WRITE_FAILED = 1,
+        RECORDER_ERROR_NO_STREAM = 2,
+        RECORDER_ERROR_OVER_MAX_DURATION = 3,
+        RECORDER_ERROR_CONFIG_CHANGED = 4,
+        RECORDER_ERROR_CUSTOM_STREAM_DETECTED = 5
+    };
+
+    public struct MediaRecorderConfiguration {
+        public string storagePath;
+        public MediaRecorderContainerFormat containerFormat;
+        public MediaRecorderStreamType streamType;
+        public int maxDurationMs;
+        public int recorderInfoUpdateInterval;
+    };
+
+    public struct RecorderInfo {
+        public string fileName;
+        public uint durationMs;
+        public uint fileSize;
+    };
+
+
+    /** The local  proxy mode type. 
+    * @since v3.6
+    */
+    public enum LOCAL_PROXY_MODE {
+        /** 0: Connect local proxy with high priority, if not connected to local proxy, fallback to sdrtn.
+        */
+        ConnectivityFirst = 0,
+        /** 1: Only connect local proxy
+        */
+        LocalOnly = 1,
+    };
+
+    public struct LocalAccessPointConfiguration {
+        /** local access point ip address list.
+        */
+        public string[] ipList;
+        /** the number of local access point ip address.
+        */
+        public int ipListSize;
+        /** local access point domain list.
+        */
+        public string[] domainList;
+        /** the number of local access point domain.
+        */
+        public int domainListSize;
+        /** certificate domain name installed on specific local access point. pass "" means using sni domain on specific local access point
+        */
+        public string verifyDomainName;
+        /** local proxy connection mode, connectivity first or local only.
+        */
+        public LOCAL_PROXY_MODE mode;
+    };
+
+    /** screencapture filter window err.
+    *
+    *
+    */
+    public enum FILT_WINDOW_ERROR {
+        /** negative : fail to filter window.
+        */
+        FILT_WINDOW_ERROR_FAIL = -1,
+        /** 0: none define.
+        */
+        FILT_WINDOW_ERROR_NONE = 0
+    };
+
+    public struct ScreenCaptureInfo {
+        public string cardType;
+        public FILT_WINDOW_ERROR errCode;
+    };
+
+    /**Audio Device Test.different volume Type*/
+    public enum AudioDeviceTestVolumeType {
+        AudioTestRecordingVolume = 0,
+        AudioTestPlaybackVolume = 1,
+    };
+
+    public enum LOW_LIGHT_ENHANCE_MODE {
+        /** low light enhancement is applied automatically when neccessary. */
+        LOW_LIGHT_ENHANCE_AUTO = 0,
+        /** low light enhancement is applied manually. */
+        LOW_LIGHT_ENHANCE_MANUAL
+    };
+
+    public enum LOW_LIGHT_ENHANCE_LEVEL {
+        /** low light enhancement is applied without reducing frame rate. */
+        LOW_LIGHT_ENHANCE_LEVEL_HIGH_QUALITY = 0,
+        /** High-quality low light enhancement is applied, at the cost of possibly reduced frame rate and higher cpu usage. */
+        LOW_LIGHT_ENHANCE_LEVEL_FAST
+    };
+
+    /** lowlight enhancement options.
+    */
+    public struct LowLightEnhanceOptions {
+
+        /** lowlight enhancement mode.
+        */
+        public LOW_LIGHT_ENHANCE_MODE mode;
+
+        /** lowlight enhancement level.
+        */
+        public LOW_LIGHT_ENHANCE_LEVEL level;
+    };
+
+    public enum VIDEO_DENOISER_MODE {
+        /** video noise reduction is applied automatically when neccessary. */
+        VIDEO_DENOISER_AUTO = 0,
+        /** video noise reduction is applied manually. */
+        VIDEO_DENOISER_MANUAL
+    };
+
+    public enum VIDEO_DENOISER_LEVEL {
+        /** Video noise reduction is applied for the default scene  */
+        VIDEO_DENOISER_LEVEL_HIGH_QUALITY = 0,
+        /** Video noise reduction is applied for the fixed-camera scene to save the cpu usage */
+        VIDEO_DENOISER_LEVEL_FAST,
+        /** Video noise reduction is applied for the high noisy scene to further denoise the video. */
+        VIDEO_DENOISER_LEVEL_STRENGTH
+    };
+
+    public struct VideoDenoiserOptions {
+        /** video noise reduction mode
+        */
+        
+        /** video noise reduction mode.
+        */
+        public VIDEO_DENOISER_MODE mode;
+
+        /** video noise reduction level.
+        */
+        public VIDEO_DENOISER_LEVEL level;
+    };
+
+    /** color enhancement options.
+    */
+    public struct ColorEnhanceOptions {
+        /** Color enhance strength. The value ranges between 0 (original) and 1.
+        */
+        public float strengthLevel;
+
+        /** Skin protect level. The value ranges between 0 (original) and 1.
+        */
+        public float skinProtectLevel;
+    };
+
+    /**
+    * The reason for failure of changing role.
+    *
+    * @since v3.6.1
+    */
+    public enum CLIENT_ROLE_CHANGE_FAILED_REASON {
+        /** 1: Too many broadcasters in the channel.
+        */
+        CLIENT_ROLE_CHANGE_FAILED_BY_TOO_MANY_BROADCASTERS = 1,
+
+        /** 2: Change operation not authorized.
+        */
+        CLIENT_ROLE_CHANGE_FAILED_BY_NOT_AUTHORIZED = 2,
+
+        /** 3: Change operation timer out.
+        */
+        CLIENT_ROLE_CHANGE_FAILED_BY_REQUEST_TIME_OUT = 3,
+
+        /** 4: Change operation is interrupted since we lost connection with agora service.
+        */
+        CLIENT_ROLE_CHANGE_FAILED_BY_CONNECTION_FAILED = 4,
+    };
+
+    /**
+    * The image content of the thumbnail or icon.
+    *
+    * @since v3.5.2
+    *
+    * @note The default image is in the RGBA format. If you need to use another format, you need to convert the image on
+    * your own.
+    */
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ThumbImageBuffer {
+        /**
+        * The buffer of the thumbnail or icon.
+        */
+        public IntPtr buffer;
+        /**
+        * The buffer length (bytes) of the thumbnail or icon.
+        */
+        public uint length;
+        /**
+        * The actual width (px) of the thumbnail or icon.
+        */
+        public uint width;
+        /**
+        * The actual height (px) of the thumbnail or icon.
+        */
+        public uint height;
+    };
+
+    /**
+    * The type of the shared target.
+    *
+    * @since v3.5.2
+    */
+    public enum ScreenCaptureSourceType {
+        /**
+        * -1: Unknown type.
+        */
+        ScreenCaptureSourceType_Unknown = -1,
+        /**
+        * 0: The shared target is a window.
+        */
+        ScreenCaptureSourceType_Window = 0,
+        /**
+        * 1: The shared target is a screen of a particular monitor.
+        */
+        ScreenCaptureSourceType_Screen = 1,
+        /**
+        * 2: Reserved parameter.
+        */
+        ScreenCaptureSourceType_Custom = 2,
+    };
+
+    /**
+    * The information about the specified shareable window or screen.
+    *
+    * @since v3.5.2
+    */
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct ScreenCaptureSourceInfo {
+        /**
+        * The type of the shared target. See \ref agora::rtc::ScreenCaptureSourceType "ScreenCaptureSourceType".
+        */
+        public ScreenCaptureSourceType type;
+        /**
+        * The window ID for a window or the display ID for a screen.
+        */
+        public IntPtr sourceId;
+        /**
+        * The name of the window or screen. UTF-8 encoding.
+        */
+        public string sourceName;
+        /**
+        * The image content of the thumbnail. See ThumbImageBuffer.
+        */
+        public ThumbImageBuffer thumbImage;
+        /**
+        * The image content of the icon. See ThumbImageBuffer.
+        */
+        public ThumbImageBuffer iconImage;
+        /**
+        * The process to which the window belongs. UTF-8 encoding.
+        */
+        public string processPath;
+        /**
+        * The title of the window. UTF-8 encoding.
+        */
+        public string sourceTitle;
+        /**
+        * Determines whether the screen is the primary display:
+        * - true: The screen is the primary display.
+        * - false: The screen is not the primary display.
+        */
+        public bool primaryMonitor;
+    };
+
     #endregion some enum and struct types
 }

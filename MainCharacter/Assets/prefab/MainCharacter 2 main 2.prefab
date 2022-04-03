@@ -2412,6 +2412,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26e54e5a728a9234ab24fcf1460ed8a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  sFScene: {fileID: 0}
   wheelUi: {fileID: 1632982457}
   parent: {fileID: 7669575201854656996}
   MoveSpeed: 2
@@ -5010,7 +5011,7 @@ AudioListener:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5272312311059676419}
-  m_Enabled: 1
+  m_Enabled: 0
 --- !u!114 &5257035696203448606
 MonoBehaviour:
   m_ObjectHideFlags: 0

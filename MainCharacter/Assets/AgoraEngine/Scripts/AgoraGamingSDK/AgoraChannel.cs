@@ -51,6 +51,8 @@ namespace agora_gaming_rtc
         public ChannelOnAudioSubscribeStateChangedHandler ChannelOnAudioSubscribeStateChanged;
         public ChannelOnVideoSubscribeStateChangedHandler ChannelOnVideoSubscribeStateChanged;
         public ChannelOnUserSuperResolutionEnabledHandler ChannelOnUserSuperResolutionEnabled;
+        public ChannelOnClientRoleChangeFailedHandler ChannelOnClientRoleChangeFailed;
+        public ChannelOnFirstRemoteVideoFrameHandler ChannelOnFirstRemoteVideoFrame;
 
         /** Creates and gets an `AgoraChannel` object.
          *
@@ -313,6 +315,22 @@ namespace agora_gaming_rtc
                 return (int)ERROR_CODE.ERROR_NOT_INIT_ENGINE;
 
             return IRtcEngineNative.leaveChannel2(_channelHandler);
+        }
+
+        /** Bind local user and a remote user as an audio&video sync group. The remote user is defined by cid and uid.
+        There’s a usage limit that local user must be a video stream sender. On the receiver side, media streams from same sync group will be time-synced
+        @param channelId The channel id
+        @param uid The user ID of the remote user to be bound with (local user)
+        @return
+        - 0: Success.
+        - < 0: Failure.
+        */
+        public int SetAVSyncSource(string channelId, uint uid)
+        {
+            if (_rtcEngine == null)
+                return (int)ERROR_CODE.ERROR_NOT_INIT_ENGINE;
+
+            return IRtcEngineNative.setAVSyncSource2(_channelHandler, channelId, uid);
         }
 
         /** Publishes the local stream to the channel.
@@ -986,7 +1004,164 @@ namespace agora_gaming_rtc
                     liveStreamAdvancedFeaturesStr += "\t";
                 }
             }
-            return IRtcEngineNative.setLiveTranscoding2(_channelHandler, liveTranscoding.width, liveTranscoding.height, liveTranscoding.videoBitrate, liveTranscoding.videoFramerate, liveTranscoding.lowLatency, liveTranscoding.videoGop, (int)liveTranscoding.videoCodecProfile, liveTranscoding.backgroundColor, liveTranscoding.userCount, transcodingUserInfo.ToString(),liveTranscoding.transcodingExtraInfo, liveTranscoding.metadata, liveTranscoding.watermark.url, liveTranscoding.watermark.x, liveTranscoding.watermark.y, liveTranscoding.watermark.width, liveTranscoding.watermark.height, liveTranscoding.backgroundImage.url, liveTranscoding.backgroundImage.x, liveTranscoding.backgroundImage.y, liveTranscoding.backgroundImage.width, liveTranscoding.backgroundImage.height, (int)liveTranscoding.audioSampleRate, liveTranscoding.audioBitrate, liveTranscoding.audioChannels, (int)liveTranscoding.audioCodecProfile, liveStreamAdvancedFeaturesStr, (uint)liveTranscoding.liveStreamAdvancedFeatures.Length);
+            return IRtcEngineNative.setLiveTranscoding2(_channelHandler, liveTranscoding.width, liveTranscoding.height, liveTranscoding.videoBitrate, liveTranscoding.videoFramerate, liveTranscoding.lowLatency, liveTranscoding.videoGop, (int)liveTranscoding.videoCodecProfile, liveTranscoding.backgroundColor, liveTranscoding.userCount, transcodingUserInfo, liveTranscoding.transcodingExtraInfo, liveTranscoding.metadata, liveTranscoding.watermark.url, liveTranscoding.watermark.x, liveTranscoding.watermark.y, liveTranscoding.watermark.width, liveTranscoding.watermark.height, liveTranscoding.watermark.zOrder, liveTranscoding.watermark.alpha, liveTranscoding.watermarkCount, liveTranscoding.backgroundImage.url, liveTranscoding.backgroundImage.x, liveTranscoding.backgroundImage.y, liveTranscoding.backgroundImage.width, liveTranscoding.backgroundImage.height, liveTranscoding.backgroundImage.zOrder, liveTranscoding.backgroundImage.alpha, liveTranscoding.backgroundImageCount, (int)liveTranscoding.audioSampleRate, liveTranscoding.audioBitrate, liveTranscoding.audioChannels, (int)liveTranscoding.audioCodecProfile, liveStreamAdvancedFeaturesStr, (uint)liveTranscoding.liveStreamAdvancedFeatures.Length);
+        }
+
+
+        /** Publishes the local stream without transcoding to a specified CDN live RTMP address.  (CDN live only.)
+
+        The SDK returns the result of this method call in the \ref IRtcEngineEventHandler::onStreamPublished "onStreamPublished" callback.
+
+        The \ref agora::rtc::IRtcEngine::startRtmpStreamWithoutTranscoding "startRtmpStreamWithoutTranscoding" method call triggers the \ref agora::rtc::IRtcEngineEventHandler::onRtmpStreamingStateChanged "onRtmpStreamingStateChanged" callback on the local client to report the state of adding a local stream to the CDN.
+        @note
+        - Ensure that the user joins the channel before calling this method.
+        - This method adds only one stream RTMP URL address each time it is called.
+        - The RTMP URL address must not contain special characters, such as Chinese language characters.
+        - This method applies to Live Broadcast only.
+
+        @param url The CDN streaming URL in the RTMP format. The maximum length of this parameter is 1024 bytes.
+
+        @return
+        - 0: Success.
+        - < 0: Failure.
+                - #ERR_INVALID_ARGUMENT (2): The RTMP URL address is NULL or has a string length of 0.
+                - #ERR_NOT_INITIALIZED (7): You have not initialized the RTC engine when publishing the stream.
+        */
+        public int StartRtmpStreamWithoutTranscoding(string url)
+        {
+            if (_rtcEngine == null)
+                return (int)ERROR_CODE.ERROR_NOT_INIT_ENGINE;
+            return IRtcEngineNative.startRtmpStreamWithoutTranscoding2(_channelHandler, url);
+        }
+
+        /** Publishes the local stream with transcoding to a specified CDN live RTMP address.  (CDN live only.)
+
+        The SDK returns the result of this method call in the \ref IRtcEngineEventHandler::onStreamPublished "onStreamPublished" callback.
+
+        The \ref agora::rtc::IRtcEngine::startRtmpStreamWithTranscoding "startRtmpStreamWithTranscoding" method call triggers the \ref agora::rtc::IRtcEngineEventHandler::onRtmpStreamingStateChanged "onRtmpStreamingStateChanged" callback on the local client to report the state of adding a local stream to the CDN.
+        @note
+        - Ensure that the user joins the channel before calling this method.
+        - This method adds only one stream RTMP URL address each time it is called.
+        - The RTMP URL address must not contain special characters, such as Chinese language characters.
+        - This method applies to Live Broadcast only.
+
+        @param url The CDN streaming URL in the RTMP format. The maximum length of this parameter is 1024 bytes.
+        @param transcoding Sets the CDN live audio/video transcoding settings.  See LiveTranscoding.
+
+        @return
+        - 0: Success.
+        - < 0: Failure.
+                - #ERR_INVALID_ARGUMENT (2): The RTMP URL address is NULL or has a string length of 0.
+                - #ERR_NOT_INITIALIZED (7): You have not initialized the RTC engine when publishing the stream.
+        */
+        public int StartRtmpStreamWithTranscoding(string url, LiveTranscoding liveTranscoding)
+        {
+            if (_rtcEngine == null)
+                return (int)ERROR_CODE.ERROR_NOT_INIT_ENGINE;
+            String transcodingUserInfo = "";
+            if (liveTranscoding.userCount != 0 && liveTranscoding.transcodingUsers != null) {
+                for (int i = 0; i < liveTranscoding.userCount; i ++) {
+                    transcodingUserInfo += liveTranscoding.transcodingUsers[i].uid;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += liveTranscoding.transcodingUsers[i].x;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += liveTranscoding.transcodingUsers[i].y;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += liveTranscoding.transcodingUsers[i].width;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += liveTranscoding.transcodingUsers[i].height;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += liveTranscoding.transcodingUsers[i].zOrder;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += liveTranscoding.transcodingUsers[i].alpha;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += liveTranscoding.transcodingUsers[i].audioChannel;
+                    transcodingUserInfo += "\t";
+                }
+            }
+
+            String liveStreamAdvancedFeaturesStr = "";
+            if (liveTranscoding.liveStreamAdvancedFeatures.Length > 0) {
+                for (int i = 0; i < liveTranscoding.liveStreamAdvancedFeatures.Length; i++) {
+                    liveStreamAdvancedFeaturesStr += liveTranscoding.liveStreamAdvancedFeatures[i].featureName;
+                    liveStreamAdvancedFeaturesStr += "\t";
+                    liveStreamAdvancedFeaturesStr += liveTranscoding.liveStreamAdvancedFeatures[i].opened;
+                    liveStreamAdvancedFeaturesStr += "\t";
+                }
+            }
+            return IRtcEngineNative.startRtmpStreamWithTranscoding2(_channelHandler, url, liveTranscoding.width, liveTranscoding.height, liveTranscoding.videoBitrate, liveTranscoding.videoFramerate, liveTranscoding.lowLatency, liveTranscoding.videoGop, (int)liveTranscoding.videoCodecProfile, liveTranscoding.backgroundColor, liveTranscoding.userCount, transcodingUserInfo, liveTranscoding.transcodingExtraInfo, liveTranscoding.metadata, liveTranscoding.watermark.url, liveTranscoding.watermark.x, liveTranscoding.watermark.y, liveTranscoding.watermark.width, liveTranscoding.watermark.height, liveTranscoding.watermark.zOrder, liveTranscoding.watermark.alpha, liveTranscoding.watermarkCount, liveTranscoding.backgroundImage.url, liveTranscoding.backgroundImage.x, liveTranscoding.backgroundImage.y, liveTranscoding.backgroundImage.width, liveTranscoding.backgroundImage.height, liveTranscoding.backgroundImage.zOrder, liveTranscoding.backgroundImage.alpha, liveTranscoding.backgroundImageCount, (int)liveTranscoding.audioSampleRate, liveTranscoding.audioBitrate, liveTranscoding.audioChannels, (int)liveTranscoding.audioCodecProfile, liveStreamAdvancedFeaturesStr, (uint)liveTranscoding.liveStreamAdvancedFeatures.Length);
+        }
+
+        /** Update the video layout and audio settings for CDN live. (CDN live only.)
+        @note This method applies to Live Broadcast only.
+
+        @param transcoding Sets the CDN live audio/video transcoding settings. See LiveTranscoding.
+
+        @return
+        - 0: Success.
+        - < 0: Failure.
+        */
+        public int UpdateRtmpTranscoding(LiveTranscoding liveTranscoding)
+        {
+            if (_rtcEngine == null)
+                return (int)ERROR_CODE.ERROR_NOT_INIT_ENGINE;
+            String transcodingUserInfo = "";
+            if (liveTranscoding.userCount != 0 && liveTranscoding.transcodingUsers != null) {
+                for (int i = 0; i < liveTranscoding.userCount; i ++) {
+                    transcodingUserInfo += liveTranscoding.transcodingUsers[i].uid;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += liveTranscoding.transcodingUsers[i].x;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += liveTranscoding.transcodingUsers[i].y;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += liveTranscoding.transcodingUsers[i].width;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += liveTranscoding.transcodingUsers[i].height;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += liveTranscoding.transcodingUsers[i].zOrder;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += liveTranscoding.transcodingUsers[i].alpha;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += liveTranscoding.transcodingUsers[i].audioChannel;
+                    transcodingUserInfo += "\t";
+                }
+            }
+
+            String liveStreamAdvancedFeaturesStr = "";
+            if (liveTranscoding.liveStreamAdvancedFeatures.Length > 0) {
+                for (int i = 0; i < liveTranscoding.liveStreamAdvancedFeatures.Length; i++) {
+                    liveStreamAdvancedFeaturesStr += liveTranscoding.liveStreamAdvancedFeatures[i].featureName;
+                    liveStreamAdvancedFeaturesStr += "\t";
+                    liveStreamAdvancedFeaturesStr += liveTranscoding.liveStreamAdvancedFeatures[i].opened;
+                    liveStreamAdvancedFeaturesStr += "\t";
+                }
+            }
+            return IRtcEngineNative.updateRtmpTranscoding2(_channelHandler, liveTranscoding.width, liveTranscoding.height, liveTranscoding.videoBitrate, liveTranscoding.videoFramerate, liveTranscoding.lowLatency, liveTranscoding.videoGop, (int)liveTranscoding.videoCodecProfile, liveTranscoding.backgroundColor, liveTranscoding.userCount, transcodingUserInfo, liveTranscoding.transcodingExtraInfo, liveTranscoding.metadata, liveTranscoding.watermark.url, liveTranscoding.watermark.x, liveTranscoding.watermark.y, liveTranscoding.watermark.width, liveTranscoding.watermark.height, liveTranscoding.watermark.zOrder, liveTranscoding.watermark.alpha, liveTranscoding.watermarkCount, liveTranscoding.backgroundImage.url, liveTranscoding.backgroundImage.x, liveTranscoding.backgroundImage.y, liveTranscoding.backgroundImage.width, liveTranscoding.backgroundImage.height, liveTranscoding.backgroundImage.zOrder, liveTranscoding.backgroundImage.alpha, liveTranscoding.backgroundImageCount, (int)liveTranscoding.audioSampleRate, liveTranscoding.audioBitrate, liveTranscoding.audioChannels, (int)liveTranscoding.audioCodecProfile, liveStreamAdvancedFeaturesStr, (uint)liveTranscoding.liveStreamAdvancedFeatures.Length);
+        }
+
+        /** Stop an RTMP stream with transcoding or without transcoding from the CDN. (CDN live only.)
+
+        This method removes the RTMP URL address (added by the \ref IRtcEngine::startRtmpStreamWithoutTranscoding "startRtmpStreamWithoutTranscoding" method
+        or IRtcEngine::startRtmpStreamWithTranscoding "startRtmpStreamWithTranscoding" method) from a CDN live stream.
+        The SDK returns the result of this method call in the \ref IRtcEngineEventHandler::onStreamUnpublished "onStreamUnpublished" callback.
+
+        The \ref agora::rtc::IRtcEngine::stopRtmpStream "stopRtmpStream" method call triggers the \ref agora::rtc::IRtcEngineEventHandler::onRtmpStreamingStateChanged "onRtmpStreamingStateChanged" callback on the local client to report the state of removing an RTMP stream from the CDN.
+        @note
+        - This method removes only one RTMP URL address each time it is called.
+        - The RTMP URL address must not contain special characters, such as Chinese language characters.
+        - This method applies to Live Broadcast only.
+
+        @param url The RTMP URL address to be removed. The maximum length of this parameter is 1024 bytes.
+
+        @return
+        - 0: Success.
+        - < 0: Failure.
+        */
+        public int StopRtmpStream(string url)
+        {
+            if (_rtcEngine == null)
+                return (int)ERROR_CODE.ERROR_NOT_INIT_ENGINE;
+            return IRtcEngineNative.stopRtmpStream2(_channelHandler, url);
         }
 
         /** Adds a voice or video stream URL address to the interactive live streaming.
@@ -1982,7 +2157,7 @@ namespace agora_gaming_rtc
         }
 
         [MonoPInvokeCallback(typeof(ChannelOnRtmpStreamingStateChangedHandler))]
-        private static void OnRtmpStreamingStateChangedCallback(string channelId, string url, RTMP_STREAM_PUBLISH_STATE state, RTMP_STREAM_PUBLISH_ERROR errCode)
+        private static void OnRtmpStreamingStateChangedCallback(string channelId, string url, RTMP_STREAM_PUBLISH_STATE state, RTMP_STREAM_PUBLISH_ERROR_TYPE errCode)
         {
             AgoraChannel channel = null;
             if (_channelDictionary.ContainsKey(channelId))
@@ -2305,6 +2480,60 @@ namespace agora_gaming_rtc
             }
         }
 
+        [MonoPInvokeCallback(typeof(ChannelOnClientRoleChangeFailedHandler))]
+        private static void OnClientRoleChangeFailedCallback(string channelId, CLIENT_ROLE_CHANGE_FAILED_REASON reason, CLIENT_ROLE_TYPE currentRole)
+        {
+            AgoraChannel channel = null;
+            if (_channelDictionary.ContainsKey(channelId))
+            {
+                channel = _channelDictionary[channelId];
+                if (channel != null && channel.ChannelOnClientRoleChangeFailed != null && _AgoraCallbackObjectDictionary[channelId] != null)
+                {
+                    AgoraCallbackQueue queue = _AgoraCallbackObjectDictionary[channelId]._CallbackQueue;
+                    if (queue != null)
+                    {
+                        queue.EnQueue(()=> {
+                            if (_channelDictionary.ContainsKey(channelId))
+                            {
+                                AgoraChannel ch = _channelDictionary[channelId];
+                                if (ch != null && channel.ChannelOnClientRoleChangeFailed != null)
+                                {
+                                    ch.ChannelOnClientRoleChangeFailed(channelId, reason, currentRole);
+                                }  
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+        [MonoPInvokeCallback(typeof(ChannelOnFirstRemoteVideoFrameHandler))]
+        private static void OnFirstRemoteVideoFrameHandlerCallback(string channelId, uint uid, int width, int height, int elapsed)
+        {
+            AgoraChannel channel = null;
+            if (_channelDictionary.ContainsKey(channelId))
+            {
+                channel = _channelDictionary[channelId];
+                if (channel != null && channel.ChannelOnFirstRemoteVideoFrame != null && _AgoraCallbackObjectDictionary[channelId] != null)
+                {
+                    AgoraCallbackQueue queue = _AgoraCallbackObjectDictionary[channelId]._CallbackQueue;
+                    if (queue != null)
+                    {
+                        queue.EnQueue(()=> {
+                            if (_channelDictionary.ContainsKey(channelId))
+                            {
+                                AgoraChannel ch = _channelDictionary[channelId];
+                                if (ch != null && channel.ChannelOnFirstRemoteVideoFrame != null)
+                                {
+                                    ch.ChannelOnFirstRemoteVideoFrame(channelId, uid, width, height, elapsed);
+                                }  
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
         private void initChannelEvent()
         {
             IRtcEngineNative.initChannelEventCallback(_channelHandler, OnWarningCallback,
@@ -2341,7 +2570,9 @@ namespace agora_gaming_rtc
                                                     OnVideoPublishStateChangedCallback,
                                                     OnAudioSubscribeStateChangedCallback,
                                                     OnVideoSubscribeStateChangedCallback,
-                                                    OnUserSuperResolutionEnabledCallback);
+                                                    OnUserSuperResolutionEnabledCallback,
+                                                    OnClientRoleChangeFailedCallback,
+                                                    OnFirstRemoteVideoFrameHandlerCallback);
         }
     }
 }

@@ -16,7 +16,6 @@ public class SFSceneChanger : MonoBehaviour
 {
     private SmartFox sfs;
     string nameOfScene;
-
     // Start is called before the first frame update
     void Start()
     {
@@ -31,16 +30,34 @@ public class SFSceneChanger : MonoBehaviour
             sfs.ProcessEvents();
     }
 
-    public void JoinLiveEventRoom ()
+    public void JoinLiveEventRoom()
     {
         string room = "liveEvent";
+        print("in sfs change scene   " + room);
         nameOfScene = SceneNames.LiveEventsScene;
         sfs.Send(new JoinRoomRequest(room));
     }
 
+    public void JoinStreamEventRoom()
+    {
+        string room = "stream";
+        print("in sfs change scene   " + room);
+        nameOfScene = SceneNames.StreamEventsScene;
+        sfs.Send(new JoinRoomRequest(room));
+    }
+
+    //public void JoinLiveEventRoom()
+    //{
+    //    string room = "liveEvent";
+    //    nameOfScene = SceneNames.LiveEventsScene;
+    //    sfs.Send(new JoinRoomRequest(room));
+    //}
+
     private void OnRoomJoin(BaseEvent evt)
     {
+        print("in sfs change scene   OnRoomJoin");
         reset();
+        //if(!(sfs.LastJoinedRoom.Name== "streamEvent" ))
         SceneManager.LoadScene(nameOfScene);
     }
     private void reset()

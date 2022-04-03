@@ -275,9 +275,9 @@ namespace agora_gaming_rtc {
          * @param channelId The name of the channel that you join.
          * @param url The CDN streaming URL.
          * @param state The RTMP or RTMPS streaming state. See: #RTMP_STREAM_PUBLISH_STATE.
-         * @param errCode The detailed error information for streaming. See: #RTMP_STREAM_PUBLISH_ERROR.
+         * @param errCode The detailed error information for streaming. See: #RTMP_STREAM_PUBLISH_ERROR_TYPE.
          */
-        public delegate void ChannelOnRtmpStreamingStateChangedHandler(string channelId, string url, RTMP_STREAM_PUBLISH_STATE state, RTMP_STREAM_PUBLISH_ERROR errCode);
+        public delegate void ChannelOnRtmpStreamingStateChangedHandler(string channelId, string url, RTMP_STREAM_PUBLISH_STATE state, RTMP_STREAM_PUBLISH_ERROR_TYPE errCode);
         
         /** Occurs when the publisher's transcoding is updated.
          * 
@@ -414,5 +414,9 @@ namespace agora_gaming_rtc {
          * @param reason The reason why the super-resolution algorithm is not successfully enabled. See #SUPER_RESOLUTION_STATE_REASON.
          */
         public delegate void ChannelOnUserSuperResolutionEnabledHandler(string channelId, uint uid, bool enabled, SUPER_RESOLUTION_STATE_REASON reason);
+
+        public delegate void ChannelOnClientRoleChangeFailedHandler(string channelId, CLIENT_ROLE_CHANGE_FAILED_REASON reason, CLIENT_ROLE_TYPE currentRole);
+
+        public delegate void ChannelOnFirstRemoteVideoFrameHandler(string channelId, uint uid, int width, int height, int elapsed);
         /// @endcond
 }

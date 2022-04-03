@@ -71,11 +71,11 @@ using Sfs2X.Requests;
             cfg.Zone = "mainProject";
 
         // Initialize SFS2X client and add listeners
-#if !UNITY_WEBGL
+//#if !UNITY_WEBGL
                   sfs = new SmartFox();
-#else
-        sfs = new SmartFox(UseWebSocket.WS_BIN);
-#endif
+//#else
+//        sfs = new SmartFox(UseWebSocket.WS_BIN);
+//#endif
 
         sfs.AddEventListener(SFSEvent.CONNECTION, OnConnection);
             sfs.AddEventListener(SFSEvent.CONNECTION_LOST, OnConnectionLost);

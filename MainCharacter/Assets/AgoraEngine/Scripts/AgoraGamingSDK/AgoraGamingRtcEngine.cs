@@ -191,6 +191,19 @@ namespace agora_gaming_rtc
 
         public OnVirtualBackgroundSourceEnabledHandler OnVirtualBackgroundSourceEnabled;
 
+        public OnRequestAudioFileInfoHandler OnRequestAudioFileInfo;
+
+        public OnContentInspectResultHandler OnContentInspectResult;
+
+        public OnSnapshotTakenHandler OnSnapshotTaken;
+
+        public OnClientRoleChangeFailedHandler OnClientRoleChangeFailed;
+
+        public OnAudioDeviceTestVolumeIndicationHandler OnAudioDeviceTestVolumeIndication;
+
+        public OnScreenCaptureInfoUpdatedHandler OnScreenCaptureInfoUpdated;
+
+
         #endregion  set callback here for user
 
         private readonly AudioEffectManagerImpl mAudioEffectM;
@@ -200,6 +213,10 @@ namespace agora_gaming_rtc
         private readonly AudioRawDataManager audioRawDataManager;
         private readonly VideoRawDataManager videoRawDataManager;
         private readonly VideoRender videoRender;
+#if UNITY_EDITOR_WIN || UNITY_EDITOR_OSX || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX 
+        private readonly ScreenCaptureManager screenCaptureManager;
+#endif
+        private readonly MediaRecorder mediaRecorder;
         private readonly bool initStatus = false;
         private const string agoraGameObjectName = "agora_engine_CallBackGamObject";
         // private static GameObject agoraGameObject = null;
@@ -211,7 +228,8 @@ namespace agora_gaming_rtc
             InitGameObject();
             InitEngineCallback();
             int retCode = IRtcEngineNative.createEngine(appId);
-            if (retCode != 0) {
+            if (retCode != 0)
+            {
                 Debug.LogError("Create engine failed, error code: " + retCode);
                 initStatus = false;
             } 
@@ -222,6 +240,10 @@ namespace agora_gaming_rtc
             audioRawDataManager = AudioRawDataManager.GetInstance(this);
             videoRawDataManager = VideoRawDataManager.GetInstance(this);
             videoRender = VideoRender.GetInstance(this);
+#if UNITY_EDITOR_WIN || UNITY_EDITOR_OSX || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX 
+            screenCaptureManager = ScreenCaptureManager.GetInstance(this);
+#endif
+            mediaRecorder = MediaRecorder.GetInstance(this);
         }
 
         private IRtcEngine(RtcEngineConfig engineConfig)
@@ -239,7 +261,11 @@ namespace agora_gaming_rtc
             videoDeviceManager = VideoDeviceManager.GetInstance(this);
             audioRawDataManager = AudioRawDataManager.GetInstance(this);
             videoRawDataManager = VideoRawDataManager.GetInstance(this);
-            videoRender = VideoRender.GetInstance(this);       
+            videoRender = VideoRender.GetInstance(this); 
+#if UNITY_EDITOR_WIN || UNITY_EDITOR_OSX || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX   
+            screenCaptureManager = ScreenCaptureManager.GetInstance(this);
+#endif
+            mediaRecorder = MediaRecorder.GetInstance(this);
         }
 
         private void InitGameObject()
@@ -1110,6 +1136,21 @@ namespace agora_gaming_rtc
             return IRtcEngineNative.startEchoTest2(intervalInSeconds);
         }
 
+        /** Starts video call test.
+        *
+        * @since v3.4.10
+        *
+        * @param config  configuration for video call test.
+        *
+        * @return
+        * - 0: Success.
+        * - < 0: Failure.
+        */
+        public int StartEchoTest(EchoTestConfiguration config)
+        {
+            return IRtcEngineNative.startEchoTest3(config.view, config.enableAudio, config.enableVideo, config.token, config.channelId);
+        }
+
         /** Stops the audio call test.
          * 
          * @return
@@ -1611,6 +1652,18 @@ namespace agora_gaming_rtc
         internal IVideoRender GetVideoRender()
         {
             return videoRender;
+        }
+
+#if UNITY_EDITOR_WIN || UNITY_EDITOR_OSX || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX 
+        public IScreenCaptureManager GetScreenCaptureManager()
+        {
+            return screenCaptureManager;
+        }
+#endif
+
+        public IMediaRecorder GetMediaRecorder()
+        {
+            return mediaRecorder;
         }
 
         /** Enables the video module.
@@ -2233,7 +2286,7 @@ namespace agora_gaming_rtc
             }
 
             Debug.Log("transcodingUserInfo  " + transcodingUserInfo + "liveStreamAdvancedFeaturesStr" + liveStreamAdvancedFeaturesStr);
-            return IRtcEngineNative.setLiveTranscoding(transcoding.width, transcoding.height, transcoding.videoBitrate, transcoding.videoFramerate, transcoding.lowLatency, transcoding.videoGop, (int)transcoding.videoCodecProfile, transcoding.backgroundColor, transcoding.userCount, transcodingUserInfo, transcoding.transcodingExtraInfo, transcoding.metadata, transcoding.watermark.url, transcoding.watermark.x, transcoding.watermark.y, transcoding.watermark.width, transcoding.watermark.height, transcoding.backgroundImage.url, transcoding.backgroundImage.x, transcoding.backgroundImage.y, transcoding.backgroundImage.width, transcoding.backgroundImage.height, (int)transcoding.audioSampleRate, transcoding.audioBitrate, transcoding.audioChannels, (int)transcoding.audioCodecProfile, liveStreamAdvancedFeaturesStr, (uint)transcoding.liveStreamAdvancedFeatures.Length);
+            return IRtcEngineNative.setLiveTranscoding(transcoding.width, transcoding.height, transcoding.videoBitrate, transcoding.videoFramerate, transcoding.lowLatency, transcoding.videoGop, (int)transcoding.videoCodecProfile, transcoding.backgroundColor, transcoding.userCount, transcodingUserInfo, transcoding.transcodingExtraInfo, transcoding.metadata, transcoding.watermark.url, transcoding.watermark.x, transcoding.watermark.y, transcoding.watermark.width, transcoding.watermark.height, transcoding.watermark.zOrder, transcoding.watermark.alpha, transcoding.watermarkCount, transcoding.backgroundImage.url, transcoding.backgroundImage.x, transcoding.backgroundImage.y, transcoding.backgroundImage.width, transcoding.backgroundImage.height, transcoding.backgroundImage.zOrder, transcoding.backgroundImage.alpha, transcoding.backgroundImageCount, (int)transcoding.audioSampleRate, transcoding.audioBitrate, transcoding.audioChannels, (int)transcoding.audioCodecProfile, liveStreamAdvancedFeaturesStr, (uint)transcoding.liveStreamAdvancedFeatures.Length);
         }
 
         /** Pushes the video frame using the {@link agora_gaming_rtc.ExternalVideoFrame ExternalVideoFrame} and passes the video frame to the Agora RTC SDK.
@@ -2248,7 +2301,12 @@ namespace agora_gaming_rtc
          */
         public int PushVideoFrame(ExternalVideoFrame externalVideoFrame)
         {
-            return IRtcEngineNative.pushVideoFrame((int)externalVideoFrame.type, (int)externalVideoFrame.format, externalVideoFrame.buffer, externalVideoFrame.stride, externalVideoFrame.height, externalVideoFrame.cropLeft, externalVideoFrame.cropTop, externalVideoFrame.cropRight, externalVideoFrame.cropBottom, externalVideoFrame.rotation, externalVideoFrame.timestamp);
+            if (externalVideoFrame.buffer != null) {
+                return IRtcEngineNative.pushVideoFrame((int)externalVideoFrame.type, (int)externalVideoFrame.format, externalVideoFrame.buffer, externalVideoFrame.stride, externalVideoFrame.height, externalVideoFrame.cropLeft, externalVideoFrame.cropTop, externalVideoFrame.cropRight, externalVideoFrame.cropBottom, externalVideoFrame.rotation, externalVideoFrame.timestamp);
+            } else if (externalVideoFrame.bufferPtr != IntPtr.Zero) {
+                return IRtcEngineNative.pushVideoFrame2((int)externalVideoFrame.type, (int)externalVideoFrame.format, externalVideoFrame.bufferPtr, externalVideoFrame.stride, externalVideoFrame.height, externalVideoFrame.cropLeft, externalVideoFrame.cropTop, externalVideoFrame.cropRight, externalVideoFrame.cropBottom, externalVideoFrame.rotation, externalVideoFrame.timestamp);
+            }
+            return -1;
         }
 
         /** Configures the external video source.
@@ -2301,6 +2359,11 @@ namespace agora_gaming_rtc
         public int PushAudioFrame(AudioFrame audioFrame)
         {
             return IRtcEngineNative.pushAudioFrame_((int)audioFrame.type, audioFrame.samples, audioFrame.bytesPerSample, audioFrame.channels, audioFrame.samplesPerSec, audioFrame.buffer, audioFrame.renderTimeMs, audioFrame.avsync_type);
+        }
+
+        public int PushAudioFrame(int sourcePos, AudioFrame audioFrame)
+        {
+            return IRtcEngineNative.pushAudioFrame3_(sourcePos, (int)audioFrame.type, audioFrame.samples, audioFrame.bytesPerSample, audioFrame.channels, audioFrame.samplesPerSec, audioFrame.buffer, audioFrame.renderTimeMs, audioFrame.avsync_type);
         }
 
         /** Retrieves the audio mixing volume for local playback.
@@ -2728,7 +2791,7 @@ namespace agora_gaming_rtc
          */
         public int SetBeautyEffectOptions(bool enabled, BeautyOptions beautyOptions)
         {
-            return IRtcEngineNative.setBeautyEffectOptions(enabled, (int)beautyOptions.lighteningContrastLevel, beautyOptions.lighteningLevel, beautyOptions.smoothnessLevel, beautyOptions.rednessLevel);
+            return IRtcEngineNative.setBeautyEffectOptions(enabled, (int)beautyOptions.lighteningContrastLevel, beautyOptions.lighteningLevel, beautyOptions.smoothnessLevel, beautyOptions.rednessLevel, beautyOptions.sharpnessLevel);
         }
 
         /** Shares the whole or part of a screen by specifying the display ID.
@@ -3978,18 +4041,23 @@ namespace agora_gaming_rtc
             return IRtcEngineNative.startAudioRecordingWithConfig(config.filePath, (int)config.recordingQuality, (int)config.recordingPosition, config.recordingSampleRate);
         }
 
-        public int SetLocalAccessPoint(string[] ips, string domain) {
+        public int SetLocalAccessPoint(LocalAccessPointConfiguration config) {
 
             StringBuilder ipsStr = new StringBuilder();
-            for (int i = 0; i < ips.Length; i ++) {
-                ipsStr.Append(ips[i]);
+            for (int i = 0; i < config.ipList.Length; i ++) {
+                ipsStr.Append(config.ipList[i]);
                 ipsStr.Append("\t");
             }
-            return IRtcEngineNative.setLocalAccessPoint(ipsStr.ToString(), ips.Length, domain);
+            StringBuilder domainStr = new StringBuilder();
+            for (int i = 0; i < config.domainList.Length; i ++) {
+                domainStr.Append(config.domainList[i]);
+                domainStr.Append("\t");
+            }
+            return IRtcEngineNative.setLocalAccessPoint(ipsStr.ToString(), config.ipList.Length, domainStr.ToString(), config.domainList.Length, config.verifyDomainName, (int)config.mode);
         }
 
         public int EnableVirtualBackground(bool enabled, VirtualBackgroundSource source) {
-            return IRtcEngineNative.enableVirtualBackground(enabled, (int)source.background_source_type, source.color, source.source);
+            return IRtcEngineNative.enableVirtualBackground(enabled, (int)source.background_source_type, source.color, source.source, (int)source.blur_degree);
         }
 
         public int SetCameraTorchOn(bool on) {
@@ -3998,6 +4066,244 @@ namespace agora_gaming_rtc
 
         public bool IsCameraTorchSupported() {
             return IRtcEngineNative.isCameraTorchSupported();
+        }
+
+        public int SetExternalAudioSourceVolume(int sourcePos, int volume)
+        {
+            return IRtcEngineNative.setExternalAudioSourceVolume(sourcePos, volume);
+        }
+
+        public int SetAudioMixingPlaybackSpeed(int speed)
+        {
+            return IRtcEngineNative.setAudioMixingPlaybackSpeed(speed);
+        }
+
+        public int SelectAudioTrack(int index)
+        {
+            return IRtcEngineNative.selectAudioTrack(index);
+        }
+
+        public int GetAudioTrackCount()
+        {
+            return IRtcEngineNative.getAudioTrackCount();
+        }
+
+        public int SetAudioMixingDualMonoMode(AUDIO_MIXING_DUAL_MONO_MODE mode)
+        {
+            return IRtcEngineNative.setAudioMixingDualMonoMode((int)mode);
+        }
+
+        public int PauseAllChannelMediaRelay()
+        {
+            return IRtcEngineNative.pauseAllChannelMediaRelay();
+        }
+
+        public int ResumeAllChannelMediaRelay()
+        {
+            return IRtcEngineNative.resumeAllChannelMediaRelay();
+        }
+
+        public int GetAudioFileInfo(string filePath)
+        {
+            return IRtcEngineNative.getAudioFileInfo(filePath);
+        }
+
+        public int TakeSnapshot(string channel, uint uid, string filePath)
+        {
+            return IRtcEngineNative.takeSnapshot(channel, uid, filePath);
+        }
+
+        public int SetLowlightEnhanceOptions(bool enabled, LowLightEnhanceOptions options)
+        {
+            return IRtcEngineNative.setLowlightEnhanceOptions(enabled, (int)options.mode, (int)options.level);
+        }
+
+        public int SetVideoDenoiserOptions(bool enabled, VideoDenoiserOptions options)
+        {
+            return IRtcEngineNative.setVideoDenoiserOptions(enabled, (int)options.mode, (int)options.level);
+        }
+
+        public int SetColorEnhanceOptions(bool enabled, ColorEnhanceOptions options)
+        {
+            return IRtcEngineNative.setColorEnhanceOptions(enabled, options.strengthLevel, options.skinProtectLevel);
+        }
+
+        public int EnableContentInspect(bool enabled, string extraInfo, ContentInspectModule[] modules, int moduleCount)
+        {
+            String modulesInfo = "";
+            if (moduleCount != 0 && modules != null) {
+                for (int i = 0; i < moduleCount; i ++) {
+                    modulesInfo += modules[i].type;
+                    modulesInfo += "\t";
+                    modulesInfo += modules[i].interval;
+                    modulesInfo += "\t";
+                }
+            }
+            return IRtcEngineNative.enableContentInspect(enabled, extraInfo, modulesInfo, moduleCount);
+        }
+
+        /** Bind local user and a remote user as an audio&video sync group. The remote user is defined by cid and uid.
+        There’s a usage limit that local user must be a video stream sender. On the receiver side, media streams from same sync group will be time-synced
+        @param channelId The channel id
+        @param uid The user ID of the remote user to be bound with (local user)
+        @return
+        - 0: Success.
+        - < 0: Failure.
+        */
+        public int SetAVSyncSource(string channelId, uint uid)
+        {
+            return IRtcEngineNative.setAVSyncSource(channelId, uid);
+        }
+
+        /** Publishes the local stream without transcoding to a specified CDN live RTMP address.  (CDN live only.)
+
+        The SDK returns the result of this method call in the \ref IRtcEngineEventHandler::onStreamPublished "onStreamPublished" callback.
+
+        The \ref agora::rtc::IRtcEngine::startRtmpStreamWithoutTranscoding "startRtmpStreamWithoutTranscoding" method call triggers the \ref agora::rtc::IRtcEngineEventHandler::onRtmpStreamingStateChanged "onRtmpStreamingStateChanged" callback on the local client to report the state of adding a local stream to the CDN.
+        @note
+        - Ensure that the user joins the channel before calling this method.
+        - This method adds only one stream RTMP URL address each time it is called.
+        - The RTMP URL address must not contain special characters, such as Chinese language characters.
+        - This method applies to Live Broadcast only.
+
+        @param url The CDN streaming URL in the RTMP format. The maximum length of this parameter is 1024 bytes.
+
+        @return
+        - 0: Success.
+        - < 0: Failure.
+            - #ERR_INVALID_ARGUMENT (2): The RTMP URL address is NULL or has a string length of 0.
+            - #ERR_NOT_INITIALIZED (7): You have not initialized the RTC engine when publishing the stream.
+        */
+        public int StartRtmpStreamWithoutTranscoding(string url)
+        {
+            return IRtcEngineNative.startRtmpStreamWithoutTranscoding(url);
+        }
+
+        /** Publishes the local stream with transcoding to a specified CDN live RTMP address.  (CDN live only.)
+
+        The SDK returns the result of this method call in the \ref IRtcEngineEventHandler::onStreamPublished "onStreamPublished" callback.
+
+        The \ref agora::rtc::IRtcEngine::startRtmpStreamWithTranscoding "startRtmpStreamWithTranscoding" method call triggers the \ref agora::rtc::IRtcEngineEventHandler::onRtmpStreamingStateChanged "onRtmpStreamingStateChanged" callback on the local client to report the state of adding a local stream to the CDN.
+        @note
+        - Ensure that the user joins the channel before calling this method.
+        - This method adds only one stream RTMP URL address each time it is called.
+        - The RTMP URL address must not contain special characters, such as Chinese language characters.
+        - This method applies to Live Broadcast only.
+
+        @param url The CDN streaming URL in the RTMP format. The maximum length of this parameter is 1024 bytes.
+        @param transcoding Sets the CDN live audio/video transcoding settings.  See LiveTranscoding.
+
+        @return
+        - 0: Success.
+        - < 0: Failure.
+                - #ERR_INVALID_ARGUMENT (2): The RTMP URL address is NULL or has a string length of 0.
+                - #ERR_NOT_INITIALIZED (7): You have not initialized the RTC engine when publishing the stream.
+        */
+        public int StartRtmpStreamWithTranscoding(string url, LiveTranscoding transcoding)
+        {
+            String transcodingUserInfo = "";
+            if (transcoding.userCount != 0 && transcoding.transcodingUsers != null) {
+                for (int i = 0; i < transcoding.userCount; i ++) {
+                    transcodingUserInfo += transcoding.transcodingUsers[i].uid;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += transcoding.transcodingUsers[i].x;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += transcoding.transcodingUsers[i].y;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += transcoding.transcodingUsers[i].width;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += transcoding.transcodingUsers[i].height;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += transcoding.transcodingUsers[i].zOrder;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += transcoding.transcodingUsers[i].alpha;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += transcoding.transcodingUsers[i].audioChannel;
+                    transcodingUserInfo += "\t";
+                }
+            }
+
+            String liveStreamAdvancedFeaturesStr = "";
+            if (transcoding.liveStreamAdvancedFeatures.Length > 0) {
+                for (int i = 0; i < transcoding.liveStreamAdvancedFeatures.Length; i++) {
+                    liveStreamAdvancedFeaturesStr += transcoding.liveStreamAdvancedFeatures[i].featureName;
+                    liveStreamAdvancedFeaturesStr += "\t";
+                    liveStreamAdvancedFeaturesStr += transcoding.liveStreamAdvancedFeatures[i].opened;
+                    liveStreamAdvancedFeaturesStr += "\t";
+                }
+            }
+
+            Debug.Log("transcodingUserInfo  " + transcodingUserInfo + "liveStreamAdvancedFeaturesStr" + liveStreamAdvancedFeaturesStr);
+            return IRtcEngineNative.startRtmpStreamWithTranscoding(url, transcoding.width, transcoding.height, transcoding.videoBitrate, transcoding.videoFramerate, transcoding.lowLatency, transcoding.videoGop, (int)transcoding.videoCodecProfile, transcoding.backgroundColor, transcoding.userCount, transcodingUserInfo, transcoding.transcodingExtraInfo, transcoding.metadata, transcoding.watermark.url, transcoding.watermark.x, transcoding.watermark.y, transcoding.watermark.width, transcoding.watermark.height, transcoding.watermark.zOrder, transcoding.watermark.alpha, transcoding.watermarkCount, transcoding.backgroundImage.url, transcoding.backgroundImage.x, transcoding.backgroundImage.y, transcoding.backgroundImage.width, transcoding.backgroundImage.height, transcoding.backgroundImage.zOrder, transcoding.backgroundImage.alpha, transcoding.backgroundImageCount, (int)transcoding.audioSampleRate, transcoding.audioBitrate, transcoding.audioChannels, (int)transcoding.audioCodecProfile, liveStreamAdvancedFeaturesStr, (uint)transcoding.liveStreamAdvancedFeatures.Length);
+        }
+
+        /** Update the video layout and audio settings for CDN live. (CDN live only.)
+        @note This method applies to Live Broadcast only.
+
+        @param transcoding Sets the CDN live audio/video transcoding settings. See LiveTranscoding.
+
+        @return
+        - 0: Success.
+        - < 0: Failure.
+        */
+        public int UpdateRtmpTranscoding(LiveTranscoding transcoding)
+        {
+            String transcodingUserInfo = "";
+            if (transcoding.userCount != 0 && transcoding.transcodingUsers != null) {
+                for (int i = 0; i < transcoding.userCount; i ++) {
+                    transcodingUserInfo += transcoding.transcodingUsers[i].uid;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += transcoding.transcodingUsers[i].x;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += transcoding.transcodingUsers[i].y;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += transcoding.transcodingUsers[i].width;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += transcoding.transcodingUsers[i].height;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += transcoding.transcodingUsers[i].zOrder;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += transcoding.transcodingUsers[i].alpha;
+                    transcodingUserInfo += "\t";
+                    transcodingUserInfo += transcoding.transcodingUsers[i].audioChannel;
+                    transcodingUserInfo += "\t";
+                }
+            }
+
+            String liveStreamAdvancedFeaturesStr = "";
+            if (transcoding.liveStreamAdvancedFeatures.Length > 0) {
+                for (int i = 0; i < transcoding.liveStreamAdvancedFeatures.Length; i++) {
+                    liveStreamAdvancedFeaturesStr += transcoding.liveStreamAdvancedFeatures[i].featureName;
+                    liveStreamAdvancedFeaturesStr += "\t";
+                    liveStreamAdvancedFeaturesStr += transcoding.liveStreamAdvancedFeatures[i].opened;
+                    liveStreamAdvancedFeaturesStr += "\t";
+                }
+            }
+
+            Debug.Log("transcodingUserInfo  " + transcodingUserInfo + "liveStreamAdvancedFeaturesStr" + liveStreamAdvancedFeaturesStr);
+            return IRtcEngineNative.updateRtmpTranscoding(transcoding.width, transcoding.height, transcoding.videoBitrate, transcoding.videoFramerate, transcoding.lowLatency, transcoding.videoGop, (int)transcoding.videoCodecProfile, transcoding.backgroundColor, transcoding.userCount, transcodingUserInfo, transcoding.transcodingExtraInfo, transcoding.metadata, transcoding.watermark.url, transcoding.watermark.x, transcoding.watermark.y, transcoding.watermark.width, transcoding.watermark.height, transcoding.watermark.zOrder, transcoding.watermark.alpha, transcoding.watermarkCount, transcoding.backgroundImage.url, transcoding.backgroundImage.x, transcoding.backgroundImage.y, transcoding.backgroundImage.width, transcoding.backgroundImage.height, transcoding.backgroundImage.zOrder, transcoding.backgroundImage.alpha, transcoding.backgroundImageCount, (int)transcoding.audioSampleRate, transcoding.audioBitrate, transcoding.audioChannels, (int)transcoding.audioCodecProfile, liveStreamAdvancedFeaturesStr, (uint)transcoding.liveStreamAdvancedFeatures.Length);
+        }
+        /** Stop an RTMP stream with transcoding or without transcoding from the CDN. (CDN live only.)
+
+        This method removes the RTMP URL address (added by the \ref IRtcEngine::startRtmpStreamWithoutTranscoding "startRtmpStreamWithoutTranscoding" method
+        or IRtcEngine::startRtmpStreamWithTranscoding "startRtmpStreamWithTranscoding" method) from a CDN live stream.
+        The SDK returns the result of this method call in the \ref IRtcEngineEventHandler::onStreamUnpublished "onStreamUnpublished" callback.
+
+        The \ref agora::rtc::IRtcEngine::stopRtmpStream "stopRtmpStream" method call triggers the \ref agora::rtc::IRtcEngineEventHandler::onRtmpStreamingStateChanged "onRtmpStreamingStateChanged" callback on the local client to report the state of removing an RTMP stream from the CDN.
+        @note
+        - This method removes only one RTMP URL address each time it is called.
+        - The RTMP URL address must not contain special characters, such as Chinese language characters.
+        - This method applies to Live Broadcast only.
+
+        @param url The RTMP URL address to be removed. The maximum length of this parameter is 1024 bytes.
+
+        @return
+        - 0: Success.
+        - < 0: Failure.
+        */
+        public int StopRtmpStream(string url)
+        {
+            return IRtcEngineNative.stopRtmpStream(url);
         }
 
         /** Initializes an IRtcEngine instance.
@@ -4130,6 +4436,21 @@ namespace agora_gaming_rtc
                     vr.SetEngine(null);
                     VideoRender.ReleaseInstance();
                 } 
+
+                MediaRecorder mr = (MediaRecorder)instance.GetMediaRecorder();
+                if (mr != null)
+                {
+                    mr.SetEngine(null);
+                    MediaRecorder.ReleaseInstance();
+                } 
+#if UNITY_EDITOR_WIN || UNITY_EDITOR_OSX || UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX 
+                ScreenCaptureManager sc = (ScreenCaptureManager)instance.GetScreenCaptureManager();
+                if (sc != null)
+                {
+                    sc.SetEngine(null);
+                    ScreenCaptureManager.ReleaseInstance();
+                }
+#endif
             }
             
             IRtcEngineNative.deleteEngine();
@@ -4382,6 +4703,10 @@ namespace agora_gaming_rtc
         [MonoPInvokeCallback(typeof(OnSDKWarningHandler))]
         private static void OnSDKWarningCallback(int warn, string msg)
         {
+#if UNITY_2017_4_OR_NEWER
+            if (warn == 8 || warn == 16)
+                return;
+#endif
             if (instance != null && instance.OnWarning != null && instance._AgoraCallbackObject != null)
             {
                 AgoraCallbackQueue queue = instance._AgoraCallbackObject._CallbackQueue;
@@ -5422,7 +5747,7 @@ namespace agora_gaming_rtc
                     queue.EnQueue(()=> {
                         if (instance != null && instance.OnRtmpStreamingStateChanged != null)
                         { 
-                            instance.OnRtmpStreamingStateChanged(url, (RTMP_STREAM_PUBLISH_STATE)state, (RTMP_STREAM_PUBLISH_ERROR)errCode);
+                            instance.OnRtmpStreamingStateChanged(url, (RTMP_STREAM_PUBLISH_STATE)state, (RTMP_STREAM_PUBLISH_ERROR_TYPE)errCode);
                         }
                     });
                 }
@@ -5811,6 +6136,118 @@ namespace agora_gaming_rtc
             }
         }
 
+        [MonoPInvokeCallback(typeof(EngineEventOnRequestAudioFileInfo))]
+        private static void OnRequestAudioFileInfoHandlback(string filePath, int durationMs, int error)
+        {
+            if (instance != null && instance.OnRequestAudioFileInfo != null && instance._AgoraCallbackObject != null)
+            {
+                AgoraCallbackQueue queue = instance._AgoraCallbackObject._CallbackQueue;
+                if (!ReferenceEquals(queue, null))
+                {
+                    queue.EnQueue(()=> {
+                        if (instance != null && instance.OnRequestAudioFileInfo != null)
+                        {
+                            AudioFileInfo info = new AudioFileInfo();
+                            info.filePath = filePath;
+                            info.durationMs = durationMs; 
+                            instance.OnRequestAudioFileInfo(info, (AUDIO_FILE_INFO_ERROR)error);
+                        }
+                    });
+                }
+            }
+        }
+
+        [MonoPInvokeCallback(typeof(OnContentInspectResultHandler))]
+        private static void OnContentInspectResultCallback(CONTENT_INSPECT_RESULT result)
+        {
+            if (instance != null && instance.OnContentInspectResult != null && instance._AgoraCallbackObject != null)
+            {
+                AgoraCallbackQueue queue = instance._AgoraCallbackObject._CallbackQueue;
+                if (!ReferenceEquals(queue, null))
+                {
+                    queue.EnQueue(()=> {
+                        if (instance != null && instance.OnContentInspectResult != null)
+                        {
+                            instance.OnContentInspectResult((CONTENT_INSPECT_RESULT)result);
+                        }
+                    });
+                }
+            }
+        }
+
+        [MonoPInvokeCallback(typeof(OnSnapshotTakenHandler))]
+        private static void OnSnapshotTakenCallback(string channel, uint uid, string filePath, int width, int height, int errCode)
+        {
+            if (instance != null && instance.OnSnapshotTaken != null && instance._AgoraCallbackObject != null)
+            {
+                AgoraCallbackQueue queue = instance._AgoraCallbackObject._CallbackQueue;
+                if (!ReferenceEquals(queue, null))
+                {
+                    queue.EnQueue(()=> {
+                        if (instance != null && instance.OnSnapshotTaken != null)
+                        {
+                            instance.OnSnapshotTaken(channel, uid, filePath, width, height, errCode);
+                        }
+                    });
+                }
+            }
+        }
+
+        [MonoPInvokeCallback(typeof(OnClientRoleChangeFailedHandler))]
+        private static void OnClientRoleChangeFailedCallback(CLIENT_ROLE_CHANGE_FAILED_REASON reason, CLIENT_ROLE_TYPE currentRole)
+        {
+            if (instance != null && instance.OnClientRoleChangeFailed != null && instance._AgoraCallbackObject != null)
+            {
+                AgoraCallbackQueue queue = instance._AgoraCallbackObject._CallbackQueue;
+                if (!ReferenceEquals(queue, null))
+                {
+                    queue.EnQueue(()=> {
+                        if (instance != null && instance.OnClientRoleChangeFailed != null)
+                        {
+                            instance.OnClientRoleChangeFailed(reason, currentRole);
+                        }
+                    });
+                }
+            }
+        }
+
+        [MonoPInvokeCallback(typeof(OnAudioDeviceTestVolumeIndicationHandler))]
+        private static void OnAudioDeviceTestVolumeIndicationCallback(AudioDeviceTestVolumeType volumeType, int volume)
+        {
+            if (instance != null && instance.OnAudioDeviceTestVolumeIndication != null && instance._AgoraCallbackObject != null)
+            {
+                AgoraCallbackQueue queue = instance._AgoraCallbackObject._CallbackQueue;
+                if (!ReferenceEquals(queue, null))
+                {
+                    queue.EnQueue(()=> {
+                        if (instance != null && instance.OnAudioDeviceTestVolumeIndication != null)
+                        {
+                            instance.OnAudioDeviceTestVolumeIndication(volumeType, volume);
+                        }
+                    });
+                }
+            }
+        }
+
+        [MonoPInvokeCallback(typeof(OnScreenCaptureInfoUpdatedHandler))]
+        private static void OnScreenCaptureInfoUpdatedCallback(ScreenCaptureInfo info)
+        {
+            if (instance != null && instance.OnScreenCaptureInfoUpdated != null && instance._AgoraCallbackObject != null)
+            {
+                AgoraCallbackQueue queue = instance._AgoraCallbackObject._CallbackQueue;
+                if (!ReferenceEquals(queue, null))
+                {
+                    queue.EnQueue(()=> {
+                        if (instance != null && instance.OnScreenCaptureInfoUpdated != null)
+                        {
+                            instance.OnScreenCaptureInfoUpdated(info);
+                        }
+                    });
+                }
+            }
+        }
+
+
         private void InitEngineCallback()
         {   
             IRtcEngineNative.initEventOnEngineCallback(OnJoinChannelSuccessCallback, 
@@ -5896,7 +6333,13 @@ namespace agora_gaming_rtc
                                       OnFirstLocalVideoFramePublishedCallback,
                                       OnUserSuperResolutionEnabledCallback,
                                       OnUploadLogResultCallback,
-                                      OnVirtualBackgroundSourceEnabledCallback);
+                                      OnVirtualBackgroundSourceEnabledCallback,
+                                      OnRequestAudioFileInfoHandlback,
+                                      OnContentInspectResultCallback,
+                                      OnSnapshotTakenCallback,
+                                      OnClientRoleChangeFailedCallback,
+                                      OnAudioDeviceTestVolumeIndicationCallback,
+                                      OnScreenCaptureInfoUpdatedCallback);
         }
     }
 };

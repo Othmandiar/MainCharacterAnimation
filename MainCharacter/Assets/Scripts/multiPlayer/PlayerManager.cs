@@ -68,7 +68,7 @@ public class PlayerManager : MonoBehaviour
         //animator.StartReceivingAnimation();
 
         Partner partner = playerObj.GetComponent<Partner>();
-        partner.Init(name);
+        partner.Init(name,id);
 
         recipients[id] = playerObj.GetComponent<NetworkTransformReceiver>();
     }

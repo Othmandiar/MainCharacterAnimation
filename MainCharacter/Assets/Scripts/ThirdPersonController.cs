@@ -18,6 +18,7 @@ namespace StarterAssets
 	public class ThirdPersonController : MonoBehaviour
 	{
         public SFSceneChanger sFScene;
+        public static ThirdPersonController instance;
         public GameObject wheelUi;
         public GameObject parent;
 		[Header("Player")]
@@ -105,6 +106,8 @@ namespace StarterAssets
 
         private void Awake()
 		{
+            instance = this;
+            SceneNames temp = new SceneNames();  
             Cursor.lockState = CursorLockMode.Locked;
             sFScene = GameObject.FindGameObjectWithTag("networkManger").GetComponent<SFSceneChanger>();
             // get a reference to our main camera
@@ -167,7 +170,18 @@ namespace StarterAssets
         private void Update()
 		{
 			_hasAnimator = TryGetComponent(out _animator);
-            
+            if (Input.GetKeyDown(KeyCode.J))
+            {
+                SceneNames.temp = false;
+                sFScene.JoinStreamEventRoom();
+                return;
+            }
+            if (Input.GetKeyDown(KeyCode.Y))
+            {
+                SceneNames.temp = true;
+                sFScene.JoinStreamEventRoom();
+                return;
+            }
             if (canLoadEventScene&&Input.GetKeyDown(KeyCode.L))
             {
                 sFScene.JoinLiveEventRoom();

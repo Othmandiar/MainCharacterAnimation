@@ -8,6 +8,9 @@ TagManager:
   - chair
   - goToEvent
   - networkManger
+  - streamUI
+  - textChatScroll
+  - textChatUI
   layers:
   - Default
   - TransparentFX

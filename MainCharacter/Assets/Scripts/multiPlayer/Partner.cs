@@ -6,15 +6,16 @@ using UnityEngine;
 public class Partner : MonoBehaviour
 {
     public PartnerInfo info;
-
+    public int sfsID;
     private bool showingInfo = false;
 
     private float timeSinceLastRaycast = 0;
     private readonly float showInfoTime = 0.5f;
 
-    public void Init(string name)
+    public void Init(string name ,int smartID)
     {
         info.SetName(name);
+        sfsID = smartID;
         info.Hide();
         showingInfo = false;
     }

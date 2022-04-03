@@ -16,6 +16,8 @@ namespace agora_gaming_rtc
 
         public abstract int SetAudioRecordingDevice(string deviceId);
 
+		public abstract int GetAudioRecordingDefaultDevice(ref string deviceName, ref string deviceId);
+
  		public abstract int StartAudioRecordingDeviceTest(int indicationInterval);
 
  		public abstract int StopAudioRecordingDeviceTest();
@@ -31,6 +33,8 @@ namespace agora_gaming_rtc
         public abstract bool IsAudioRecordingDeviceMute();
         
 		public abstract int GetCurrentRecordingDeviceInfo(ref string deviceName, ref string deviceId);
+
+		public abstract int FollowSystemRecordingDevice(bool enable);
 	}
 
     /** The definition of AudioRecordingDeviceManager. */
@@ -146,6 +150,21 @@ namespace agora_gaming_rtc
 				return (int)ERROR_CODE.ERROR_INVALID_ARGUMENT;
 			}  
 		}
+
+		public override int GetAudioRecordingDefaultDevice(ref string deviceName, ref string deviceId)
+        {
+            if (mEngine == null)
+                return (int)ERROR_CODE.ERROR_NOT_INIT_ENGINE;
+            
+            System.IntPtr audioRecordingDeviceNamePtr = Marshal.AllocHGlobal(512);
+			System.IntPtr audioRecordingDeviceIdPtr = Marshal.AllocHGlobal(512);
+			int ret = IRtcEngineNative.getAudioRecordingDefaultDevice(audioRecordingDeviceNamePtr, audioRecordingDeviceIdPtr);
+			deviceName = Marshal.PtrToStringAnsi(audioRecordingDeviceNamePtr);
+			deviceId = Marshal.PtrToStringAnsi(audioRecordingDeviceIdPtr);
+			Marshal.FreeHGlobal(audioRecordingDeviceNamePtr);
+			Marshal.FreeHGlobal(audioRecordingDeviceIdPtr);
+			return ret;
+        }
 
         /** Retrieves the device ID of the current audio capturing device.
         * 
@@ -324,6 +343,22 @@ namespace agora_gaming_rtc
 				deviceId = Marshal.PtrToStringAnsi(audioRecordingDeviceIdPtr);
 				Marshal.FreeHGlobal(audioRecordingDeviceNamePtr);
 				Marshal.FreeHGlobal(audioRecordingDeviceIdPtr);
+				return ret;	
+			}
+			else
+			{
+				return (int)ERROR_CODE.ERROR_NO_DEVICE_PLUGIN;
+			}
+		}
+
+		public override int FollowSystemRecordingDevice(bool enable)
+		{
+			if (mEngine == null)
+				return (int)ERROR_CODE.ERROR_NOT_INIT_ENGINE;
+
+			if (GetAudioRecordingDeviceCount() > 0)
+			{
+				int ret = IRtcEngineNative.followSystemRecordingDevice(enable);
 				return ret;	
 			}
 			else
